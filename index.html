@@ -201,7 +201,7 @@ input[type=password].form-input,input[type=text].form-input{padding:6px 9px;bord
       </div>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>#</th><th>부서명</th><th>이름 (컴퓨터이름)</th><th>보안점수</th><th>비고 (특이사항)</th></tr></thead>
+          <thead><tr><th>#</th><th>부서명</th><th>이름 (컴퓨터이름)</th><th>IP 주소</th><th>보안점수</th><th>비고 (특이사항)</th></tr></thead>
           <tbody id="previewBody"></tbody>
         </table>
       </div>
@@ -229,7 +229,7 @@ input[type=password].form-input,input[type=text].form-input{padding:6px 9px;bord
       <div class="card-title">최종 결과 미리보기</div>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>#</th><th>부서명</th><th>이름 (컴퓨터이름)</th><th>보안점수</th><th>비고 (특이사항)</th></tr></thead>
+          <thead><tr><th>#</th><th>부서명</th><th>이름 (컴퓨터이름)</th><th>IP 주소</th><th>보안점수</th><th>비고 (특이사항)</th></tr></thead>
           <tbody id="finalBody"></tbody>
         </table>
       </div>
@@ -932,11 +932,11 @@ function doMapping(){
           const existScore=parseInt(matchedMap[idx].score||0);
           const newScore=parseInt(row['보안 점수']||0);
           if(newScore>existScore)
-            matchedMap[idx]={...res.entry,compName:res.compName,score:row['보안 점수'],notes:buildNotes(row),row};
+            matchedMap[idx]={...res.entry,compName:res.compName,ip:row['IP 주소']||'',score:row['보안 점수'],notes:buildNotes(row),row};
           if(!matchedMap[idx].notes.includes('PC 2대'))
             matchedMap[idx].notes=matchedMap[idx].notes?matchedMap[idx].notes+', PC 2대 운영':'PC 2대 운영';
         } else {
-          matchedMap[idx]={...res.entry,compName:res.compName,score:row['보안 점수'],notes:buildNotes(row),row};
+          matchedMap[idx]={...res.entry,compName:res.compName,ip:row['IP 주소']||'',score:row['보안 점수'],notes:buildNotes(row),row};
         }
       } else {
         const uid='pub_'+Object.keys(assignments).length;
@@ -960,11 +960,11 @@ function doMapping(){
         const existScore=parseInt(matchedMap[idx].score||0);
         const newScore=parseInt(row['보안 점수']||0);
         if(newScore>existScore)
-          matchedMap[idx]={...entry,compName:comp,score:row['보안 점수'],notes:buildNotes(row),row,matchType};
+          matchedMap[idx]={...entry,compName:comp,ip:row['IP 주소']||'',score:row['보안 점수'],notes:buildNotes(row),row,matchType};
         if(!matchedMap[idx].notes.includes('PC 2대'))
           matchedMap[idx].notes=matchedMap[idx].notes?matchedMap[idx].notes+', PC 2대 운영':'PC 2대 운영';
       } else {
-        matchedMap[idx]={...entry,compName:comp,score:row['보안 점수'],notes:buildNotes(row),row,matchType};
+        matchedMap[idx]={...entry,compName:comp,ip:row['IP 주소']||'',score:row['보안 점수'],notes:buildNotes(row),row,matchType};
       }
     } else {
       unknownRows.push({id:'unk_'+unknownRows.length,row,comp,ip,guessedDept:getIPPrefix(ip)});
@@ -1087,7 +1087,7 @@ function buildFinalRows(){
       const primary = DIR.find(d=>d.name===entry.name && !d.sameAs);
       const m = primary ? matchedMap[primary.idx] : null;
       rows.push({dirIdx:entry.idx, dept:entry.dept, name:entry.name,
-        compName: m ? m.compName : null,
+        compName: m ? m.compName : null, ip: m ? (m.ip||'') : '',
         score: m ? m.score : '',
         notes: m ? (m.notes ? m.notes+' (겸직)' : '겸직') : '미점검(겸직)'});
       continue;
@@ -1095,10 +1095,10 @@ function buildFinalRows(){
     const m=matchedMap[entry.idx];
     if(m){
       rows.push({dirIdx:entry.idx,dept:entry.dept,name:entry.name,compName:m.compName,
-        score:m.score,notes:m.notes,matchType:m.matchType});
+        ip:m.ip||'',score:m.score,notes:m.notes,matchType:m.matchType});
     } else {
       rows.push({dirIdx:entry.idx,dept:entry.dept,name:entry.name,compName:null,
-        score:'',notes:'미점검'});
+        ip:'',score:'',notes:'미점검'});
     }
   }
   // 2. 미확인 기기 반영
@@ -1110,13 +1110,14 @@ function buildFinalRows(){
       const existing=rows.find(r=>r.dirIdx===asgn.dirIdx);
       if(existing){
         existing.compName=u.comp;
+        existing.ip=u.ip||'';
         existing.score=u.row['보안 점수'];
         existing.notes=buildNotes(u.row);
       }
     } else {
       // 공용 PC → 맨 끝에 추가
       rows.push({dirIdx:9999,dept:asgn.customDept||u.guessedDept||'미확인',
-        name:asgn.customName||u.comp,compName:u.comp,
+        name:asgn.customName||u.comp,compName:u.comp,ip:u.ip||'',
         score:u.row['보안 점수'],notes:buildNotes(u.row)});
     }
   }
@@ -1124,7 +1125,7 @@ function buildFinalRows(){
   for(const [k,v] of Object.entries(assignments)){
     if(k.startsWith('pub_')){
       rows.push({dirIdx:9999,dept:v.customDept||'',name:v.customName||'',
-        compName:v.compName,score:v.score,notes:v.notes});
+        compName:v.compName,ip:v.row?v.row['IP 주소']||'':'',score:v.score,notes:v.notes});
     }
   }
   rows.sort((a,b)=>a.dirIdx-b.dirIdx);
@@ -1174,6 +1175,7 @@ function renderTable(tbodyId, isFinal){
       <td class="row-idx">${i+1}</td>
       <td>${r.dept}</td>
       <td>${nameDisplay}</td>
+      <td style="font-size:11px;color:var(--muted);font-family:monospace">${r.ip||'—'}</td>
       <td class="score-cell">${scoreBadge(r.score,r.notes)}</td>
       <td>${notesHtml}</td>
     `;
@@ -1208,19 +1210,19 @@ function exportXlsx(){
   }
   const filename=(yearM?yearM+'_':'')+'에이전트_보안점검결과.xlsx';
 
-  const wsData=[['부서명','이름(컴퓨터 이름)','보안점수','비고(특이사항)']];
+  const wsData=[['부서명','이름(컴퓨터 이름)','IP 주소','보안점수','비고(특이사항)']];
   rows.forEach(r=>{
     const nameCol = r.compName && r.compName!==r.name
       ? r.name+'('+r.compName+')'
       : r.name;
-    wsData.push([r.dept, nameCol, r.notes==='미점검'?'미점검':(r.score||''), r.notes]);
+    wsData.push([r.dept, nameCol, r.ip||'', r.notes==='미점검'?'미점검':(r.score||''), r.notes]);
   });
 
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet(wsData);
 
   // 열 너비
-  ws['!cols']=[{wch:30},{wch:22},{wch:10},{wch:50}];
+  ws['!cols']=[{wch:30},{wch:22},{wch:18},{wch:10},{wch:50}];
 
   // 헤더 스타일 (기본 지원 안 하지만 셀 ref 저장)
   XLSX.utils.book_append_sheet(wb, ws, '보안점검결과');
