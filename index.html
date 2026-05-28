@@ -239,6 +239,12 @@ input[type=password].form-input,input[type=text].form-input{padding:6px 9px;bord
 
 <script>
 // ============================================================
+// ★ Gist ID 기본값 (선택사항, 비밀 아님 — GitHub에 올려도 무방)
+// ★ PAT(토큰)은 여기에 절대 입력하지 마세요 → 설정 모달에서 입력
+// ============================================================
+const _DEFAULT_PAT     = '';   // ← 비워두세요. 토큰은 설정 모달(⚙️)에서 입력하세요.
+const _DEFAULT_GIST_ID = '';   // ← Gist ID를 여기에 넣으면 어느 PC에서든 같은 Gist를 씁니다.
+// ============================================================
 // 전화번호부 데이터 (PDF 등장 순서 기준, 공석 제외)
 // ============================================================
 const DEFAULT_DIR_RAW = [
@@ -503,7 +509,7 @@ function resetDir(){
 // GitHub Gist 연동
 // ============================================================
 const GIST_FILE='bwyf_security_config.json';
-function getGistCfg(){return{pat:localStorage.getItem('bwyf_gist_pat')||'',gistId:localStorage.getItem('bwyf_gist_id')||''};}
+function getGistCfg(){return{pat:localStorage.getItem('bwyf_gist_pat')||_DEFAULT_PAT,gistId:localStorage.getItem('bwyf_gist_id')||_DEFAULT_GIST_ID};}
 function saveGistCfg(pat,gistId){localStorage.setItem('bwyf_gist_pat',pat);localStorage.setItem('bwyf_gist_id',gistId);}
 
 function setGistStatus(type,msg){
@@ -585,6 +591,10 @@ function saveGistInputs(){
 // 앱 초기화 (DOMContentLoaded)
 // ============================================================
 async function initApp(){
+  // Gist ID 기본값만 localStorage에 선저장 (PAT은 UI로만 입력)
+  if(_DEFAULT_GIST_ID && !localStorage.getItem('bwyf_gist_id'))
+    localStorage.setItem('bwyf_gist_id', _DEFAULT_GIST_ID);
+
   // 로컬 저장 데이터 우선 적용
   const localDir=loadDirFromLocal();
   if(localDir) DIR=localDir.map((e,i)=>({...e,idx:i+1}));
@@ -1245,7 +1255,7 @@ function exportXlsx(){
       <div class="form-row" style="flex-wrap:nowrap;gap:8px">
         <div class="form-group" style="flex:1;min-width:0">
           <label>Personal Access Token <span style="font-weight:400;color:#9CA3AF">(gist 권한)</span></label>
-          <input type="password" class="form-input" id="gistPatInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+          <input type="password" class="form-input" id="gistPatInput" placeholder="GitHub PAT를 입력하세요">
         </div>
         <div class="form-group" style="flex:1;min-width:0">
           <label>Gist ID <span style="font-weight:400;color:#9CA3AF">(비워두면 신규 생성)</span></label>
