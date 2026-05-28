@@ -130,6 +130,13 @@ select.asgn{padding:5px 8px;border:1px solid var(--border);border-radius:6px;fon
 .form-group input,.form-group select{padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;min-width:120px}
 .settings-btn{background:var(--card);border:1.5px solid var(--border);color:var(--text);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px}
 .settings-btn:hover{background:var(--bg);border-color:var(--g);color:var(--g)}
+
+.s-section{margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.s-section:last-of-type{border-bottom:none;margin-bottom:0}
+.s-section-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:11px;display:flex;align-items:center;gap:6px}
+.gist-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.status-dot{font-size:12px;color:var(--muted)}
+input[type=password].form-input,input[type=text].form-input{padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -234,7 +241,7 @@ select.asgn{padding:5px 8px;border:1px solid var(--border);border-radius:6px;fon
 // ============================================================
 // 전화번호부 데이터 (PDF 등장 순서 기준, 공석 제외)
 // ============================================================
-const DIR = [
+const DEFAULT_DIR_RAW = [
   // 대표이사 / 윤리감사
   {dept:'대표이사',name:'이강인',title:'대표이사'},
   {dept:'윤리감사',name:'이정아',title:'직원'},
@@ -416,7 +423,188 @@ const DIR = [
   {dept:'부천시일·쉼지원센터',name:'윤준영',title:'직원',ipHint:'192.168.150'},
   {dept:'부천시일·쉼지원센터',name:'오나영',title:'직원',ipHint:'192.168.150'},
   {dept:'부천시일·쉼지원센터',name:'이유림',title:'직원',ipHint:'192.168.150'},
-].map((e,i)=>({...e,idx:i+1}));
+];
+let DIR = DEFAULT_DIR_RAW.map((e,i)=>({...e,idx:i+1}));
+
+
+// ============================================================
+// 전화번호부 동적 관리
+// ============================================================
+function setDIR(raw){
+  DIR = raw.map((e,i)=>({...e,idx:i+1}));
+  try{
+    localStorage.setItem('bwyf_dir', JSON.stringify(raw));
+    localStorage.setItem('bwyf_dir_ts', new Date().toLocaleDateString('ko-KR'));
+  }catch(e){}
+}
+function loadDirFromLocal(){
+  try{const s=localStorage.getItem('bwyf_dir');return s?JSON.parse(s):null;}catch{return null;}
+}
+function exportDirToExcel(){
+  const rows=[['순번','부서명','이름','직위','겸직여부(Y)','IP힌트']];
+  DIR.forEach((e,i)=>rows.push([i+1,e.dept,e.name||'',e.title||'',e.sameAs?'Y':'',e.ipHint||'']));
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:6},{wch:32},{wch:12},{wch:10},{wch:10},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws,'전화번호부');
+  XLSX.writeFile(wb,'부천여성청소년재단_전화번호부_편집용.xlsx');
+}
+function importDirFromExcel(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      let hIdx=rows.findIndex(r=>r.some(c=>String(c).trim()==='이름'));
+      if(hIdx<0){alert('이름 열을 찾을 수 없습니다.');return;}
+      const hdr=rows[hIdx].map(h=>String(h).trim());
+      const iDept=hdr.findIndex(h=>h.includes('부서'));
+      const iName=hdr.findIndex(h=>h==='이름');
+      const iTitle=hdr.findIndex(h=>h.includes('직위'));
+      const iSame=hdr.findIndex(h=>h.includes('겸직'));
+      const iIP=hdr.findIndex(h=>h.includes('IP'));
+      if(iName<0||iDept<0){alert('부서명·이름 열이 필요합니다.');return;}
+      const newDir=rows.slice(hIdx+1)
+        .filter(r=>String(r[iName]||'').trim())
+        .map(r=>{
+          const ent={dept:String(r[iDept]||'').trim(),name:String(r[iName]||'').trim(),title:String(r[iTitle]||'').trim()};
+          if(String(r[iSame]||'').toUpperCase().trim()==='Y') ent.sameAs=true;
+          const ip=String(r[iIP]||'').trim();
+          if(ip) ent.ipHint=ip;
+          return ent;
+        });
+      if(!newDir.length){alert('가져올 데이터가 없습니다.');return;}
+      if(!confirm('전화번호부 '+newDir.length+'명을 가져옵니다. 현재 데이터를 덮어씁니다.')) return;
+      setDIR(newDir);
+      updateDirStatus();
+      alert('전화번호부 '+newDir.length+'명 가져오기 완료');
+    }catch(err){alert('파일 오류: '+err.message);}
+  };
+  reader.readAsBinaryString(file);
+}
+function updateDirStatus(){
+  const el=document.getElementById('dirStatus');if(!el)return;
+  const ts=localStorage.getItem('bwyf_dir_ts')||'';
+  const isCustom=!!localStorage.getItem('bwyf_dir');
+  el.textContent=isCustom?'커스텀 전화번호부 ('+DIR.length+'명)'+(ts?' · '+ts:''):'기본 전화번호부 ('+DIR.length+'명)';
+  el.style.color=isCustom?'var(--g)':'var(--muted)';
+}
+function resetDir(){
+  if(!confirm('전화번호부를 기본값으로 초기화합니까?')) return;
+  localStorage.removeItem('bwyf_dir');localStorage.removeItem('bwyf_dir_ts');
+  DIR=DEFAULT_DIR_RAW.map((e,i)=>({...e,idx:i+1}));
+  updateDirStatus();
+  alert('초기화 완료 ('+DIR.length+'명)');
+}
+
+// ============================================================
+// GitHub Gist 연동
+// ============================================================
+const GIST_FILE='bwyf_security_config.json';
+function getGistCfg(){return{pat:localStorage.getItem('bwyf_gist_pat')||'',gistId:localStorage.getItem('bwyf_gist_id')||''};}
+function saveGistCfg(pat,gistId){localStorage.setItem('bwyf_gist_pat',pat);localStorage.setItem('bwyf_gist_id',gistId);}
+
+function setGistStatus(type,msg){
+  const el=document.getElementById('gistStatus');if(!el)return;
+  el.textContent={ok:'✅',error:'❌',warn:'⚠️'}[type]+' '+msg;
+  el.style.color=type==='ok'?'var(--g)':type==='error'?'var(--red)':'var(--orange)';
+}
+
+async function loadFromGist(){
+  const{pat,gistId}=getGistCfg();
+  if(!pat||!gistId) throw new Error('PAT 또는 Gist ID 없음');
+  const res=await fetch('https://api.github.com/gists/'+gistId,
+    {headers:{'Authorization':'token '+pat,'Accept':'application/vnd.github+json'}});
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const data=await res.json();
+  const file=data.files[GIST_FILE];
+  if(!file) throw new Error('설정 파일('+GIST_FILE+')을 Gist에서 찾을 수 없음');
+  return JSON.parse(file.content);
+}
+
+async function saveToGist(payload){
+  const{pat,gistId}=getGistCfg();
+  if(!pat) throw new Error('PAT 없음');
+  const body={files:{[GIST_FILE]:{content:JSON.stringify(payload,null,2)}}};
+  if(gistId){
+    const res=await fetch('https://api.github.com/gists/'+gistId,
+      {method:'PATCH',headers:{'Authorization':'token '+pat,'Content-Type':'application/json','Accept':'application/vnd.github+json'},body:JSON.stringify(body)});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return res.json();
+  } else {
+    const res=await fetch('https://api.github.com/gists',
+      {method:'POST',headers:{'Authorization':'token '+pat,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
+       body:JSON.stringify({description:'부천여성청소년재단 보안점검 설정',public:false,...body})});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    localStorage.setItem('bwyf_gist_id',data.id);
+    document.getElementById('gistIdInput').value=data.id;
+    return data;
+  }
+}
+
+function buildGistPayload(){
+  const dirRaw=DIR.map(({idx,...rest})=>rest);
+  return{version:2,savedAt:new Date().toISOString(),rules:userRules,directory:dirRaw};
+}
+
+async function syncToGist(){
+  const btn=document.getElementById('gistSaveBtn');
+  btn.textContent='저장 중…';btn.disabled=true;
+  try{
+    await saveToGist(buildGistPayload());
+    setGistStatus('ok','저장 완료 '+new Date().toLocaleTimeString('ko-KR'));
+  }catch(e){setGistStatus('error',e.message);alert('Gist 저장 실패: '+e.message);}
+  btn.textContent='☁ Gist에 저장';btn.disabled=false;
+}
+
+async function syncFromGist(){
+  const btn=document.getElementById('gistLoadBtn');
+  btn.textContent='불러오는 중…';btn.disabled=true;
+  try{
+    const data=await loadFromGist();
+    if(data.rules){userRules=data.rules;saveRules();}
+    if(data.directory){setDIR(data.directory);}
+    setGistStatus('ok','동기화 완료 '+new Date().toLocaleTimeString('ko-KR'));
+    renderRulesTable();updateDirStatus();
+    alert('Gist 동기화 완료 | 규칙 '+(data.rules?.length||0)+'개, 전화번호부 '+(data.directory?.length||0)+'명');
+  }catch(e){setGistStatus('error',e.message);alert('Gist 불러오기 실패: '+e.message);}
+  btn.textContent='☁ Gist에서 불러오기';btn.disabled=false;
+}
+
+function saveGistInputs(){
+  const pat=document.getElementById('gistPatInput').value.trim();
+  const gistId=document.getElementById('gistIdInput').value.trim();
+  saveGistCfg(pat,gistId);
+  setGistStatus('warn', pat?'설정 저장됨 — 동기화 버튼을 눌러 적용':'PAT 없음');
+}
+
+// ============================================================
+// 앱 초기화 (DOMContentLoaded)
+// ============================================================
+async function initApp(){
+  // 로컬 저장 데이터 우선 적용
+  const localDir=loadDirFromLocal();
+  if(localDir) DIR=localDir.map((e,i)=>({...e,idx:i+1}));
+  userRules=loadRules();
+
+  // Gist 연동이 설정된 경우 자동 동기화
+  const{pat,gistId}=getGistCfg();
+  if(pat&&gistId){
+    setGistStatus('warn','자동 동기화 중…');
+    try{
+      const data=await loadFromGist();
+      if(data.rules){userRules=data.rules;saveRules();}
+      if(data.directory){setDIR(data.directory);}
+      setGistStatus('ok','자동 동기화 완료 '+new Date().toLocaleTimeString('ko-KR'));
+    }catch(e){
+      setGistStatus('error','자동 동기화 실패 — 로컬 데이터 사용');
+    }
+  }
+}
+document.addEventListener('DOMContentLoaded', initApp);
 
 // ============================================================
 // 점검항목 약어 매핑
@@ -501,6 +689,12 @@ function applyRuleToRow(rule, row){
 
 // ── 설정 모달 UI ──────────────────────────────────────────────────────
 function openSettings(){
+  const{pat,gistId}=getGistCfg();
+  document.getElementById('gistPatInput').value=pat;
+  document.getElementById('gistIdInput').value=gistId;
+  if(pat&&gistId) setGistStatus('warn','설정됨');
+  else setGistStatus('warn','미설정');
+  updateDirStatus();
   populatePersonSelect();
   onRuleTypeChange();
   renderRulesTable();
@@ -1041,12 +1235,58 @@ function exportXlsx(){
 <div id="settingsModal" class="modal-overlay hidden">
   <div class="modal-box">
     <div class="modal-hd">
-      <h2>⚙️ 사전 매핑 규칙 설정</h2>
+      <h2>⚙️ 설정</h2>
       <button class="modal-close" onclick="closeSettings()">✕</button>
     </div>
-    <div class="alert a-info" style="margin-bottom:14px">
-      이름 매핑, IP 매핑, 중복 스킵 규칙을 직접 추가·삭제할 수 있습니다. 설정은 브라우저에 저장됩니다.
+
+    <!-- ① GitHub Gist 연동 -->
+    <div class="s-section">
+      <div class="s-section-title">☁ GitHub Gist 연동</div>
+      <div class="form-row" style="flex-wrap:nowrap;gap:8px">
+        <div class="form-group" style="flex:1;min-width:0">
+          <label>Personal Access Token <span style="font-weight:400;color:#9CA3AF">(gist 권한)</span></label>
+          <input type="password" class="form-input" id="gistPatInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+        </div>
+        <div class="form-group" style="flex:1;min-width:0">
+          <label>Gist ID <span style="font-weight:400;color:#9CA3AF">(비워두면 신규 생성)</span></label>
+          <input type="text" class="form-input" id="gistIdInput" placeholder="abc123...">
+        </div>
+        <div class="form-group" style="justify-content:flex-end;padding-top:18px">
+          <button class="btn btn-out btn-sm" onclick="saveGistInputs()">설정 저장</button>
+        </div>
+      </div>
+      <div class="gist-row">
+        <button class="btn btn-g btn-sm" id="gistLoadBtn" onclick="syncFromGist()">☁ Gist에서 불러오기</button>
+        <button class="btn btn-out btn-sm" id="gistSaveBtn" onclick="syncToGist()">☁ Gist에 저장</button>
+        <span id="gistStatus" class="status-dot">⚠️ 미설정</span>
+      </div>
+      <div style="font-size:11px;color:#9CA3AF;margin-top:6px">
+        PAT은 이 브라우저의 localStorage에만 저장됩니다. 공용 PC에서는 사용 후 토큰을 삭제하세요.
+      </div>
     </div>
+
+    <!-- ② 전화번호부 관리 -->
+    <div class="s-section">
+      <div class="s-section-title">👥 전화번호부 관리</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span id="dirStatus" style="font-size:12px;flex:1">기본 전화번호부</span>
+        <button class="btn btn-out btn-sm" onclick="exportDirToExcel()">⬇ Excel 내보내기</button>
+        <label class="btn btn-out btn-sm" style="cursor:pointer;margin:0">
+          ⬆ Excel 가져오기
+          <input type="file" accept=".xlsx,.xls" style="display:none"
+            onchange="importDirFromExcel(this.files[0]);this.value=''">
+        </label>
+        <button class="btn btn-sm" onclick="resetDir()"
+          style="background:#FEE2E2;color:#991B1B;border:none;cursor:pointer">초기화</button>
+      </div>
+      <div style="font-size:11px;color:#9CA3AF;margin-top:6px">
+        내보낸 Excel을 편집(인원 추가·삭제·수정) 후 다시 가져오면 전화번호부가 업데이트됩니다.
+      </div>
+    </div>
+
+    <!-- ③ 사전 매핑 규칙 -->
+    <div class="s-section">
+      <div class="s-section-title">🔗 사전 매핑 규칙</div>
     <table class="rule-tbl">
       <thead><tr><th>유형</th><th>컴퓨터이름</th><th>IP 주소</th><th>할당 대상</th><th>비고</th><th></th></tr></thead>
       <tbody id="rulesTbody"></tbody>
@@ -1115,9 +1355,10 @@ function exportXlsx(){
       </div>
     </div>
     <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
-      <button class="btn btn-out btn-sm" onclick="resetRules()" style="color:var(--red);border-color:var(--red)">기본값으로 초기화</button>
+      <button class="btn btn-out btn-sm" onclick="resetRules()" style="color:var(--red);border-color:var(--red)">규칙 기본값 초기화</button>
       <button class="btn btn-g" onclick="closeSettings()">완료</button>
     </div>
+    </div><!-- ③ s-section 닫기 -->
   </div>
 </div>
 
