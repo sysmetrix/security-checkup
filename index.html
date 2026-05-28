@@ -640,6 +640,8 @@ function renderStep2(){
     const listEl=document.getElementById('unkList');
     listEl.innerHTML='';
     unknownRows.forEach(u=>{
+      // 기본값: 공용 PC / 기타로 사전 할당
+      if(!assignments[u.id]) assignUnknown(u.id,'PUBLIC');
       const optHtml = buildAssignOptions(u);
       const div=document.createElement('div');
       div.className='unk-item';
@@ -654,8 +656,8 @@ function renderStep2(){
         </div>
         <div class="unk-ctrl">
           <select class="asgn" data-id="${u.id}" onchange="assignUnknown('${u.id}',this.value)">
-            <option value="">-- 할당 선택 --</option>
-            <option value="PUBLIC">🖥️ 공용 PC / 기타</option>
+            <option value="">-- 직접 선택 --</option>
+            <option value="PUBLIC" selected>🖥️ 공용 PC / 기타</option>
             <option value="IGNORE">❌ 제외 (출력 안 함)</option>
             <optgroup label="── 전화번호부 ──">
             ${optHtml}
