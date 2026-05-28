@@ -105,6 +105,31 @@ select.asgn{padding:5px 8px;border:1px solid var(--border);border-radius:6px;fon
 .cnt-tag{background:var(--g);color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700}
 .unk-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .unk-count{background:var(--orange);color:#fff;border-radius:10px;padding:2px 9px;font-size:11px;font-weight:700}
+
+/* 설정 모달 */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center}
+.modal-box{background:var(--card);border-radius:14px;width:820px;max-width:95vw;max-height:86vh;overflow-y:auto;padding:28px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.modal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-hd h2{font-size:15px;font-weight:700;color:var(--g)}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;padding:0}
+.rule-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}
+.rule-tbl th{background:var(--g);color:#fff;padding:8px 10px;text-align:left;font-weight:600}
+.rule-tbl td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.rule-tbl tr:last-child td{border-bottom:none}
+.rule-tbl tr:hover td{background:#F5FBF7}
+.tag{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700}
+.tag-name{background:#DBEAFE;color:#1E40AF}
+.tag-ip{background:#D1FAE5;color:#065F46}
+.tag-both{background:#EDE9FE;color:#5B21B6}
+.tag-skip{background:#FEE2E2;color:#991B1B}
+.add-form{background:#F8FCFA;border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:6px}
+.add-form h3{font-size:13px;font-weight:700;color:var(--g);margin-bottom:12px}
+.form-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:11px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select{padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;min-width:120px}
+.settings-btn{background:var(--card);border:1.5px solid var(--border);color:var(--text);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px}
+.settings-btn:hover{background:var(--bg);border-color:var(--g);color:var(--g)}
 </style>
 </head>
 <body>
@@ -141,7 +166,10 @@ select.asgn{padding:5px 8px;border:1px solid var(--border);border-radius:6px;fon
         <p>① 매월 보안관제 포털에서 내보낸 <b>에이전트별 점검 결과 현황</b> 엑셀 파일을 업로드합니다.</p>
         <p>② 전화번호부와 자동 대조하여 부서·이름을 매핑합니다. 미확인 기기는 직접 할당합니다.</p>
         <p>③ 전화번호부 순번 기준으로 정렬된 엑셀 파일을 다운로드합니다.</p>
-        <p style="margin-top:8px;color:#92400E">※ 하드코딩된 예외 규칙: BWYF-712→서원하 / 192.168.150.171→이유림 / 노트북1(0.187)→건강가정(공용) / 전예리 중복 IP 통합</p>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:11px;color:var(--muted)">이름 매핑·IP 매핑·중복 스킵 등 특수 규칙을 직접 설정할 수 있습니다.</span>
+          <button class="settings-btn" onclick="openSettings()">⚙️ 사전 매핑 규칙 설정</button>
+        </div>
       </div>
     </div>
   </div>
@@ -419,6 +447,161 @@ const IP_DEPT = [
   {prefix:'192.168.1',   dept:'청소년상담복지센터'},
 ];
 
+
+// ============================================================
+// 사전 매핑 규칙 관리 (localStorage 저장)
+// ============================================================
+const DEFAULT_RULES = [
+  {id:'def1',type:'name_ip',matchName:'BWYF-712',matchIP:'192.168.137',ipMode:'prefix',
+   targetType:'person',targetName:'서원하',note:'BWYF-712 노트북'},
+  {id:'def2',type:'ip',matchName:'',matchIP:'192.168.150.171',ipMode:'exact',
+   targetType:'person',targetName:'이유림',note:''},
+  {id:'def3',type:'name_ip',matchName:'노트북1',matchIP:'192.168.0.187',ipMode:'exact',
+   targetType:'public',customDept:'부천시건강가정지원센터',customLabel:'노트북1(공용)',note:''},
+  {id:'def4',type:'name',matchName:'대표이사',matchIP:'',ipMode:'exact',
+   targetType:'person',targetName:'이강인',note:''},
+  {id:'def5',type:'skip',matchName:'전예리',matchIP:'192.168.137.166',ipMode:'exact',
+   targetType:'skip',note:'전예리 중복 IP 통합'},
+];
+
+function loadRules(){
+  try{
+    const s=localStorage.getItem('bwyf_map_rules');
+    return s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT_RULES));
+  }catch{return JSON.parse(JSON.stringify(DEFAULT_RULES));}
+}
+function saveRules(){localStorage.setItem('bwyf_map_rules',JSON.stringify(userRules));}
+
+let userRules = loadRules();
+
+function ruleMatchesRow(rule, row){
+  const comp=row['컴퓨터 이름']||'', ip=row['IP 주소']||'';
+  const nameOk = !rule.matchName || comp===rule.matchName;
+  const ipOk   = !rule.matchIP   ||
+    (rule.ipMode==='prefix'?ip.startsWith(rule.matchIP):ip===rule.matchIP);
+  if(rule.type==='name')    return comp===rule.matchName;
+  if(rule.type==='ip')      return ipOk;
+  if(rule.type==='name_ip') return nameOk && ipOk;
+  if(rule.type==='skip')    return nameOk && ipOk;
+  return false;
+}
+
+function applyRuleToRow(rule, row){
+  const comp=row['컴퓨터 이름']||'';
+  if(rule.targetType==='skip') return {skip:true};
+  if(rule.targetType==='person'){
+    const entry=DIR.find(d=>d.name===rule.targetName&&!d.sameAs);
+    return {entry, compName: rule.matchName||comp};
+  }
+  if(rule.targetType==='public'){
+    return {entry:null,customDept:rule.customDept,customName:rule.customLabel||comp,compName:comp};
+  }
+  return null;
+}
+
+// ── 설정 모달 UI ──────────────────────────────────────────────────────
+function openSettings(){
+  populatePersonSelect();
+  onRuleTypeChange();
+  renderRulesTable();
+  document.getElementById('settingsModal').classList.remove('hidden');
+}
+function closeSettings(){
+  document.getElementById('settingsModal').classList.add('hidden');
+}
+
+function populatePersonSelect(){
+  const sel=document.getElementById('rTargetPerson');
+  sel.innerHTML='<option value="">-- 선택 --</option>';
+  DIR.filter(d=>!d.sameAs).forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d.name; o.textContent=d.dept+' – '+d.name;
+    sel.appendChild(o);
+  });
+}
+
+function onRuleTypeChange(){
+  const t=document.getElementById('ruleType').value;
+  document.getElementById('fgName').style.display   = (t==='name'||t==='name_ip'||t==='skip')?'':'none';
+  document.getElementById('fgIP').style.display     = (t==='ip'||t==='name_ip'||t==='skip')?'':'none';
+  document.getElementById('fgIPMode').style.display = (t==='ip'||t==='name_ip'||t==='skip')?'':'none';
+  document.getElementById('fgTarget').style.display = (t==='skip')?'none':'';
+  if(t==='skip') document.getElementById('rTargetType').value='person';
+}
+
+function onTargetTypeChange(){
+  const t=document.getElementById('rTargetType').value;
+  document.getElementById('fgPerson').classList.toggle('hidden', t!=='person');
+  document.getElementById('fgPublicDept').classList.toggle('hidden', t!=='public');
+  document.getElementById('fgPublicLabel').classList.toggle('hidden', t!=='public');
+}
+
+const TYPE_LABELS={name:'이름',ip:'IP',name_ip:'이름+IP',skip:'스킵'};
+const TYPE_TAGS  ={name:'tag-name',ip:'tag-ip',name_ip:'tag-both',skip:'tag-skip'};
+
+function renderRulesTable(){
+  const tb=document.getElementById('rulesTbody');
+  tb.innerHTML='';
+  if(!userRules.length){
+    tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">규칙 없음</td></tr>';
+    return;
+  }
+  userRules.forEach((r,i)=>{
+    const target = r.targetType==='skip'?'<span style="color:var(--red)">건너뜀</span>'
+      : r.targetType==='public'?`<span style="color:var(--p)">${r.customDept||''} (공용)</span>`
+      : `<span style="color:var(--g)">${r.targetName}</span>`;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><span class="tag ${TYPE_TAGS[r.type]}">${TYPE_LABELS[r.type]}</span></td>
+      <td>${r.matchName||'<span style="color:#ccc">-</span>'}</td>
+      <td>${r.matchIP?(r.matchIP+(r.ipMode==='prefix'?' (대역)':'')):'<span style="color:#ccc">-</span>'}</td>
+      <td>${target}</td>
+      <td style="color:var(--muted);font-size:11px">${r.note||''}</td>
+      <td><button class="btn btn-sm" style="background:#FEE2E2;color:#991B1B;border:none;cursor:pointer" onclick="deleteRule('${r.id}')">삭제</button></td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+function deleteRule(id){
+  userRules=userRules.filter(r=>r.id!==id);
+  saveRules(); renderRulesTable();
+}
+
+function resetRules(){
+  if(!confirm('기본값으로 초기화하시겠습니까?')) return;
+  userRules=JSON.parse(JSON.stringify(DEFAULT_RULES));
+  saveRules(); renderRulesTable();
+}
+
+function addRule(){
+  const type  = document.getElementById('ruleType').value;
+  const mName = document.getElementById('rMatchName').value.trim();
+  const mIP   = document.getElementById('rMatchIP').value.trim();
+  const ipMode= document.getElementById('rIPMode').value;
+  const tType = type==='skip'?'skip':document.getElementById('rTargetType').value;
+  const tName = document.getElementById('rTargetPerson').value;
+  const cDept = document.getElementById('rCustomDept').value.trim();
+  const cLabel= document.getElementById('rCustomLabel').value.trim();
+  const note  = document.getElementById('rNote').value.trim();
+
+  if(type==='name'&&!mName){alert('컴퓨터이름을 입력하세요.');return;}
+  if(type==='ip'&&!mIP){alert('IP 주소를 입력하세요.');return;}
+  if(type==='name_ip'&&!mName&&!mIP){alert('컴퓨터이름 또는 IP를 입력하세요.');return;}
+  if(type==='skip'&&(!mName&&!mIP)){alert('스킵 조건(이름 또는 IP)을 입력하세요.');return;}
+  if(tType==='person'&&!tName){alert('직원을 선택하세요.');return;}
+  if(tType==='public'&&!cDept){alert('공용 부서명을 입력하세요.');return;}
+
+  const rule={
+    id:'u'+Date.now(),type,matchName:mName,matchIP:mIP,ipMode,
+    targetType:tType,targetName:tName,customDept:cDept,customLabel:cLabel,note
+  };
+  userRules.push(rule);
+  saveRules(); renderRulesTable();
+  // 폼 초기화
+  ['rMatchName','rMatchIP','rNote','rCustomDept','rCustomLabel'].forEach(id=>document.getElementById(id).value='');
+}
+
 // ============================================================
 // 전역 상태
 // ============================================================
@@ -528,71 +711,54 @@ function doMapping(){
   unknownRows = [];
   assignments = {};
 
-  // 전예리 중복 통합: 192.168.137.166 행은 스킵 (137.16이 실제 데이터)
-  const skipKey = '192.168.137.166-전예리';
-
-  // 하드코딩 예외 사전 처리
-  const HARDCODED = [
-    {test:r=>r['컴퓨터 이름']==='BWYF-712'&&r['IP 주소'].startsWith('192.168.137'),
-      resolve:()=>{const e=DIR.find(d=>d.name==='서원하');return{entry:e,compName:'BWYF-712'}}},
-    {test:r=>r['IP 주소']==='192.168.150.171',
-      resolve:()=>{const e=DIR.find(d=>d.name==='이유림');return{entry:e,compName:r=>r['컴퓨터 이름']}}},
-    {test:r=>r['컴퓨터 이름']==='노트북1'&&r['IP 주소']==='192.168.0.187',
-      resolve:()=>({entry:null,customDept:'부천시건강가정지원센터',customName:'(공용)',compName:'노트북1'})},
-    // 대표이사 컴퓨터
-    {test:r=>r['컴퓨터 이름']==='대표이사',
-      resolve:()=>{const e=DIR.find(d=>d.name==='이강인');return{entry:e,compName:'대표이사'}}},
-  ];
-
   for(const row of agentRows){
     const ip    = row['IP 주소']||'';
     const comp  = row['컴퓨터 이름']||'';
-    const rowKey= ip+'-'+comp;
+    let mapped  = false;
 
-    // 전예리 중복 스킵
-    if(rowKey===skipKey) continue;
-
-    let mapped = false;
-
-    // 하드코딩 예외 체크
-    for(const hc of HARDCODED){
-      if(hc.test(row)){
-        const res = hc.resolve(row);
-        const cn  = typeof res.compName==='function'? res.compName(row): (res.compName||comp);
-        if(res.entry){
-          const idx = res.entry.idx;
-          if(!matchedMap[idx]||parseInt(row['보안 점수']||0)>parseInt(matchedMap[idx].score||0)){
-            matchedMap[idx]={...res.entry,compName:cn,score:row['보안 점수'],notes:buildNotes(row),row};
-          }
+    // 사용자 정의 규칙 순서대로 적용
+    for(const rule of userRules){
+      if(!ruleMatchesRow(rule,row)) continue;
+      const res = applyRuleToRow(rule,row);
+      if(!res){mapped=true;break;}  // null = skip
+      if(res.skip){mapped=true;break;}
+      if(res.entry){
+        const idx=res.entry.idx;
+        if(matchedMap[idx]){
+          const existScore=parseInt(matchedMap[idx].score||0);
+          const newScore=parseInt(row['보안 점수']||0);
+          if(newScore>existScore)
+            matchedMap[idx]={...res.entry,compName:res.compName,score:row['보안 점수'],notes:buildNotes(row),row};
+          if(!matchedMap[idx].notes.includes('PC 2대'))
+            matchedMap[idx].notes=matchedMap[idx].notes?matchedMap[idx].notes+', PC 2대 운영':'PC 2대 운영';
         } else {
-          // 공용 PC → 전화번호부 외 추가
-          const uid='pub_'+Object.keys(assignments).length;
-          assignments[uid]={customDept:res.customDept,customName:res.customName,compName:cn,score:row['보안 점수'],notes:buildNotes(row),row};
+          matchedMap[idx]={...res.entry,compName:res.compName,score:row['보안 점수'],notes:buildNotes(row),row};
         }
-        mapped=true; break;
+      } else {
+        const uid='pub_'+Object.keys(assignments).length;
+        assignments[uid]={customDept:res.customDept,customName:res.customName,compName:res.compName,
+          score:row['보안 점수'],notes:buildNotes(row),row};
       }
+      mapped=true; break;
     }
     if(mapped) continue;
 
     // 일반 이름 매핑
-    const found = findDirEntry(comp, ip);
+    const found=findDirEntry(comp,ip);
     if(found){
-      const {entry, matchType, all} = found;
+      const{entry,matchType,all}=found;
       if(matchType==='exact_ambiguous'){
-        // 다중 동명이인 → 미확인 처리
         unknownRows.push({id:'unk_'+unknownRows.length,row,comp,ip,guessedDept:getIPPrefix(ip),ambiguous:all});
         continue;
       }
-      const idx = entry.idx;
+      const idx=entry.idx;
       if(matchedMap[idx]){
-        // 동일인의 두 번째 PC → 높은 점수 채택 후 'PC 2대 운영' 표기
-        const existScore = parseInt(matchedMap[idx].score||0);
-        const newScore   = parseInt(row['보안 점수']||0);
-        if(newScore > existScore)
+        const existScore=parseInt(matchedMap[idx].score||0);
+        const newScore=parseInt(row['보안 점수']||0);
+        if(newScore>existScore)
           matchedMap[idx]={...entry,compName:comp,score:row['보안 점수'],notes:buildNotes(row),row,matchType};
         if(!matchedMap[idx].notes.includes('PC 2대'))
-          matchedMap[idx].notes = matchedMap[idx].notes
-            ? matchedMap[idx].notes+', PC 2대 운영' : 'PC 2대 운영';
+          matchedMap[idx].notes=matchedMap[idx].notes?matchedMap[idx].notes+', PC 2대 운영':'PC 2대 운영';
       } else {
         matchedMap[idx]={...entry,compName:comp,score:row['보안 점수'],notes:buildNotes(row),row,matchType};
       }
@@ -870,5 +1036,90 @@ function exportXlsx(){
   XLSX.writeFile(wb, filename);
 }
 </script>
+
+<!-- 사전 매핑 규칙 설정 모달 -->
+<div id="settingsModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <h2>⚙️ 사전 매핑 규칙 설정</h2>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="alert a-info" style="margin-bottom:14px">
+      이름 매핑, IP 매핑, 중복 스킵 규칙을 직접 추가·삭제할 수 있습니다. 설정은 브라우저에 저장됩니다.
+    </div>
+    <table class="rule-tbl">
+      <thead><tr><th>유형</th><th>컴퓨터이름</th><th>IP 주소</th><th>할당 대상</th><th>비고</th><th></th></tr></thead>
+      <tbody id="rulesTbody"></tbody>
+    </table>
+    <!-- 규칙 추가 폼 -->
+    <div class="add-form">
+      <h3>+ 규칙 추가</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>유형</label>
+          <select id="ruleType" onchange="onRuleTypeChange()">
+            <option value="name">이름 → 직원</option>
+            <option value="ip">IP → 직원</option>
+            <option value="name_ip">이름+IP → 직원/공용</option>
+            <option value="skip">중복 스킵</option>
+          </select>
+        </div>
+        <div class="form-group" id="fgName">
+          <label>컴퓨터이름</label>
+          <input type="text" id="rMatchName" placeholder="예: BWYF-712">
+        </div>
+        <div class="form-group" id="fgIP">
+          <label>IP 주소</label>
+          <input type="text" id="rMatchIP" placeholder="예: 192.168.150.171">
+        </div>
+        <div class="form-group" id="fgIPMode">
+          <label>IP 비교</label>
+          <select id="rIPMode">
+            <option value="exact">정확히 일치</option>
+            <option value="prefix">앞부분 일치 (대역)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" id="fgTarget">
+        <div class="form-group">
+          <label>할당 유형</label>
+          <select id="rTargetType" onchange="onTargetTypeChange()">
+            <option value="person">전화번호부 직원</option>
+            <option value="public">공용 PC</option>
+          </select>
+        </div>
+        <div class="form-group" id="fgPerson">
+          <label>직원 선택</label>
+          <select id="rTargetPerson" style="min-width:200px">
+            <option value="">-- 선택 --</option>
+          </select>
+        </div>
+        <div class="form-group hidden" id="fgPublicDept">
+          <label>공용 부서명</label>
+          <input type="text" id="rCustomDept" placeholder="예: 부천시건강가정지원센터">
+        </div>
+        <div class="form-group hidden" id="fgPublicLabel">
+          <label>표시 이름</label>
+          <input type="text" id="rCustomLabel" placeholder="예: 노트북1(공용)">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1">
+          <label>비고</label>
+          <input type="text" id="rNote" placeholder="메모 (선택)">
+        </div>
+        <div class="form-group" style="justify-content:flex-end">
+          <label style="opacity:0">.</label>
+          <button class="btn btn-g" onclick="addRule()">추가</button>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+      <button class="btn btn-out btn-sm" onclick="resetRules()" style="color:var(--red);border-color:var(--red)">기본값으로 초기화</button>
+      <button class="btn btn-g" onclick="closeSettings()">완료</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
