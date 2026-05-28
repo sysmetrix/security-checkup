@@ -171,8 +171,8 @@ input[type=password].form-input,input[type=text].form-input{padding:6px 9px;bord
       <div class="card-title">사용 안내</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.8">
         <p>① 매월 보안관제 포털에서 내보낸 <b>에이전트별 점검 결과 현황</b> 엑셀 파일을 업로드합니다.</p>
-        <p>② 전화번호부와 자동 대조하여 부서·이름을 매핑합니다. 미확인 기기는 직접 할당합니다.</p>
-        <p>③ 전화번호부 순번 기준으로 정렬된 엑셀 파일을 다운로드합니다.</p>
+        <p>② 직원 명부와 자동 대조하여 부서·이름을 매핑합니다. 미확인 기기는 직접 할당합니다.</p>
+        <p>③ 직원 명부 순번 기준으로 정렬된 엑셀 파일을 다운로드합니다.</p>
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
           <span style="font-size:11px;color:var(--muted)">이름 매핑·IP 매핑·중복 스킵 등 특수 규칙을 직접 설정할 수 있습니다.</span>
           <button class="settings-btn" onclick="openSettings()">⚙️ 사전 매핑 규칙 설정</button>
@@ -190,12 +190,12 @@ input[type=password].form-input,input[type=text].form-input{padding:6px 9px;bord
         <div class="card-title" style="margin-bottom:0">⚠️ 검토 필요 기기</div>
         <span class="unk-count" id="unkCount">0</span>
       </div>
-      <div class="alert a-warn" style="margin-bottom:12px">아래 기기는 전화번호부에서 자동 매핑되지 않았습니다. 소속 부서/직원을 지정하거나 공용 PC로 표시하세요.</div>
+      <div class="alert a-warn" style="margin-bottom:12px">아래 기기는 직원 명부에서 자동 매핑되지 않았습니다. 소속 부서/직원을 지정하거나 공용 PC로 표시하세요.</div>
       <div class="unk-wrap" id="unkList"></div>
     </div>
     <!-- 매핑 결과 미리보기 -->
     <div class="card">
-      <div class="card-title">📋 자동 매핑 결과 (전화번호부 순서 기준)</div>
+      <div class="card-title">📋 자동 매핑 결과 (직원 명부 순서 기준)</div>
       <div class="info-row">
         <span class="cnt-tag" id="matchedCount">0</span> 건 자동 매핑
       </div>
@@ -245,7 +245,7 @@ input[type=password].form-input,input[type=text].form-input{padding:6px 9px;bord
 const _DEFAULT_PAT     = '';   // ← 비워두세요. 토큰은 설정 모달(⚙️)에서 입력하세요.
 const _DEFAULT_GIST_ID = '';   // ← Gist ID를 여기에 넣으면 어느 PC에서든 같은 Gist를 씁니다.
 // ============================================================
-// 전화번호부 데이터 (PDF 등장 순서 기준, 공석 제외)
+// 직원 명부 데이터 (PDF 등장 순서 기준, 공석 제외)
 // ============================================================
 const DEFAULT_DIR_RAW = [
   // 대표이사 / 윤리감사
@@ -434,7 +434,7 @@ let DIR = DEFAULT_DIR_RAW.map((e,i)=>({...e,idx:i+1}));
 
 
 // ============================================================
-// 전화번호부 동적 관리
+// 직원 명부 동적 관리
 // ============================================================
 function setDIR(raw){
   DIR = raw.map((e,i)=>({...e,idx:i+1}));
@@ -452,8 +452,8 @@ function exportDirToExcel(){
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:6},{wch:32},{wch:12},{wch:10},{wch:10},{wch:18}];
-  XLSX.utils.book_append_sheet(wb,ws,'전화번호부');
-  XLSX.writeFile(wb,'부천여성청소년재단_전화번호부_편집용.xlsx');
+  XLSX.utils.book_append_sheet(wb,ws,'직원 명부');
+  XLSX.writeFile(wb,'부천여성청소년재단_직원명부_편집용.xlsx');
 }
 function importDirFromExcel(file){
   if(!file) return;
@@ -482,10 +482,10 @@ function importDirFromExcel(file){
           return ent;
         });
       if(!newDir.length){alert('가져올 데이터가 없습니다.');return;}
-      if(!confirm('전화번호부 '+newDir.length+'명을 가져옵니다. 현재 데이터를 덮어씁니다.')) return;
+      if(!confirm('직원 명부 '+newDir.length+'명을 가져옵니다. 현재 데이터를 덮어씁니다.')) return;
       setDIR(newDir);
       updateDirStatus();
-      alert('전화번호부 '+newDir.length+'명 가져오기 완료');
+      alert('직원 명부 '+newDir.length+'명 가져오기 완료');
     }catch(err){alert('파일 오류: '+err.message);}
   };
   reader.readAsBinaryString(file);
@@ -494,11 +494,11 @@ function updateDirStatus(){
   const el=document.getElementById('dirStatus');if(!el)return;
   const ts=localStorage.getItem('bwyf_dir_ts')||'';
   const isCustom=!!localStorage.getItem('bwyf_dir');
-  el.textContent=isCustom?'커스텀 전화번호부 ('+DIR.length+'명)'+(ts?' · '+ts:''):'기본 전화번호부 ('+DIR.length+'명)';
+  el.textContent=isCustom?'커스텀 직원 명부 ('+DIR.length+'명)'+(ts?' · '+ts:''):'기본 직원 명부 ('+DIR.length+'명)';
   el.style.color=isCustom?'var(--g)':'var(--muted)';
 }
 function resetDir(){
-  if(!confirm('전화번호부를 기본값으로 초기화합니까?')) return;
+  if(!confirm('직원 명부를 기본값으로 초기화합니까?')) return;
   localStorage.removeItem('bwyf_dir');localStorage.removeItem('bwyf_dir_ts');
   DIR=DEFAULT_DIR_RAW.map((e,i)=>({...e,idx:i+1}));
   updateDirStatus();
@@ -575,7 +575,7 @@ async function syncFromGist(){
     if(data.directory){setDIR(data.directory);}
     setGistStatus('ok','동기화 완료 '+new Date().toLocaleTimeString('ko-KR'));
     renderRulesTable();updateDirStatus();
-    alert('Gist 동기화 완료 | 규칙 '+(data.rules?.length||0)+'개, 전화번호부 '+(data.directory?.length||0)+'명');
+    alert('Gist 동기화 완료 | 규칙 '+(data.rules?.length||0)+'개, 직원 명부 '+(data.directory?.length||0)+'명');
   }catch(e){setGistStatus('error',e.message);alert('Gist 불러오기 실패: '+e.message);}
   btn.textContent='☁ Gist에서 불러오기';btn.disabled=false;
 }
@@ -994,7 +994,7 @@ function renderStep2(){
   const dangerCnt = Object.values(matchedMap).filter(m=>{const s=parseInt(m.score||0);return s>0&&s<80}).length;
   const warnCnt = Object.values(matchedMap).filter(m=>{const s=parseInt(m.score||0);return s>=80&&s<100}).length;
   document.getElementById('statsArea').innerHTML=`
-    <div class="stat"><div class="stat-n">${total}</div><div class="stat-l">전화번호부 인원</div></div>
+    <div class="stat"><div class="stat-n">${total}</div><div class="stat-l">직원 명부 인원</div></div>
     <div class="stat"><div class="stat-n">${matched}</div><div class="stat-l">자동 매핑</div></div>
     <div class="stat warn"><div class="stat-n">${warnCnt}</div><div class="stat-l">취약 (80~99점)</div></div>
     <div class="stat danger"><div class="stat-n">${dangerCnt}</div><div class="stat-l">심각 (~79점)</div></div>
@@ -1029,7 +1029,7 @@ function renderStep2(){
             <option value="">-- 직접 선택 --</option>
             <option value="PUBLIC" selected>🖥️ 공용 PC / 기타</option>
             <option value="IGNORE">❌ 제외 (출력 안 함)</option>
-            <optgroup label="── 전화번호부 ──">
+            <optgroup label="── 직원 명부 ──">
             ${optHtml}
             </optgroup>
           </select>
@@ -1080,7 +1080,7 @@ function guessedDeptById(id){
 
 function buildFinalRows(){
   const rows=[];
-  // 1. 전화번호부 기준 전체 행
+  // 1. 직원 명부 기준 전체 행
   for(const entry of DIR){
     if(entry.sameAs){
       // 겸직 행: 주 엔트리(동명 비겸직)의 점검 결과를 복사
@@ -1106,7 +1106,7 @@ function buildFinalRows(){
     const asgn=assignments[u.id];
     if(!asgn||asgn.ignore) continue;
     if(asgn.dirIdx){
-      // 전화번호부 항목에 덮어쓰기
+      // 직원 명부 항목에 덮어쓰기
       const existing=rows.find(r=>r.dirIdx===asgn.dirIdx);
       if(existing){
         existing.compName=u.comp;
@@ -1275,11 +1275,11 @@ function exportXlsx(){
       </div>
     </div>
 
-    <!-- ② 전화번호부 관리 -->
+    <!-- ② 직원 명부 관리 -->
     <div class="s-section">
-      <div class="s-section-title">👥 전화번호부 관리</div>
+      <div class="s-section-title">👥 직원 명부 관리</div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span id="dirStatus" style="font-size:12px;flex:1">기본 전화번호부</span>
+        <span id="dirStatus" style="font-size:12px;flex:1">기본 직원 명부</span>
         <button class="btn btn-out btn-sm" onclick="exportDirToExcel()">⬇ Excel 내보내기</button>
         <label class="btn btn-out btn-sm" style="cursor:pointer;margin:0">
           ⬆ Excel 가져오기
@@ -1290,7 +1290,7 @@ function exportXlsx(){
           style="background:#FEE2E2;color:#991B1B;border:none;cursor:pointer">초기화</button>
       </div>
       <div style="font-size:11px;color:#9CA3AF;margin-top:6px">
-        내보낸 Excel을 편집(인원 추가·삭제·수정) 후 다시 가져오면 전화번호부가 업데이트됩니다.
+        내보낸 Excel을 편집(인원 추가·삭제·수정) 후 다시 가져오면 직원 명부가 업데이트됩니다.
       </div>
     </div>
 
@@ -1334,7 +1334,7 @@ function exportXlsx(){
         <div class="form-group">
           <label>할당 유형</label>
           <select id="rTargetType" onchange="onTargetTypeChange()">
-            <option value="person">전화번호부 직원</option>
+            <option value="person">직원 명부</option>
             <option value="public">공용 PC</option>
           </select>
         </div>
