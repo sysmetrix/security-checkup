@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>에이전트 보안점검 자동화 | 부천여성청소년재단</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#006D3A;--g2:#005730;--p:#5C2D91;--p2:#4a2278;
+  --gold:#FDB913;--bg:#EFF5F1;--card:#fff;
+  --border:#D4E0D9;--text:#1B2E22;--muted:#5A7060;
+  --red:#C0392B;--orange:#D97706;--blue:#1E40AF;
+}
+body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{background:var(--g);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.logo{width:34px;height:34px;background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--g)}
+header h1{font-size:17px;font-weight:700;letter-spacing:-.3px}
+header span{font-size:12px;opacity:.75;margin-left:6px}
+.main{max-width:1160px;margin:0 auto;padding:28px 20px}
+/* steps */
+.steps{display:flex;background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;margin-bottom:28px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.step{flex:1;padding:13px 10px;text-align:center;font-size:12px;color:var(--muted);border-right:1px solid var(--border);transition:all .2s}
+.step:last-child{border-right:none}
+.step.active{background:var(--g);color:#fff;font-weight:700}
+.step.done{background:#E3F4EB;color:var(--g);font-weight:600}
+.step-n{font-size:20px;font-weight:800;display:block;line-height:1.1}
+/* cards */
+.card{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:24px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.card-title{font-size:14px;font-weight:700;color:var(--g);margin-bottom:16px;display:flex;align-items:center;gap:7px}
+.card-title::before{content:'';display:inline-block;width:3px;height:16px;background:var(--g);border-radius:2px}
+/* upload */
+.upload-zone{border:2.5px dashed var(--g);border-radius:12px;padding:56px 32px;text-align:center;cursor:pointer;transition:all .2s;background:#F5FBF7}
+.upload-zone:hover,.upload-zone.over{background:#EBF7F1;border-color:var(--p)}
+.upload-icon{font-size:46px;margin-bottom:10px}
+.upload-zone h3{font-size:16px;color:var(--g);font-weight:700;margin-bottom:6px}
+.upload-zone p{font-size:13px;color:var(--muted)}
+#fi{display:none}
+/* btns */
+.btn{padding:9px 22px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:700;transition:all .15s;font-family:inherit}
+.btn-g{background:var(--g);color:#fff}.btn-g:hover{background:var(--g2)}
+.btn-gold{background:var(--gold);color:#1a1000}.btn-gold:hover{background:#e5a600}
+.btn-out{background:transparent;border:1.5px solid var(--g);color:var(--g)}.btn-out:hover{background:#F0FBF5}
+.btn-sm{padding:5px 12px;font-size:11px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
+.stat{background:var(--card);border-radius:10px;padding:14px 10px;text-align:center;border:1px solid var(--border)}
+.stat-n{font-size:26px;font-weight:800;color:var(--g)}
+.stat-l{font-size:11px;color:var(--muted);margin-top:3px}
+.stat.warn .stat-n{color:var(--orange)}
+.stat.danger .stat-n{color:var(--red)}
+.stat.pur .stat-n{color:var(--p)}
+.stat.blue .stat-n{color:var(--blue)}
+/* table */
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{background:var(--g);color:#fff}
+th{padding:9px 11px;text-align:left;font-weight:600;white-space:nowrap}
+td{padding:8px 11px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.safe-row:hover td{background:#F5FBF7}
+tr.warn-row td{background:#FFFBF0}
+tr.warn-row:hover td{background:#FFF3D0}
+tr.danger-row td{background:#FFF5F5}
+tr.danger-row:hover td{background:#FFE8E8}
+tr.unchecked-row td{background:#F9FAFB}
+tr.unchecked-row:hover td{background:#F3F4F6}
+/* badges */
+.badge{display:inline-block;padding:2px 7px;border-radius:12px;font-size:10px;font-weight:700}
+.b-safe{background:#D1FAE5;color:#065F46}
+.b-warn{background:#FEF3C7;color:#92400E}
+.b-danger{background:#FEE2E2;color:#991B1B}
+.b-unc{background:#F3F4F6;color:#6B7280}
+.b-pur{background:#EDE9FE;color:#5B21B6}
+/* unknown items */
+.unk-wrap{margin-top:6px}
+.unk-item{display:grid;grid-template-columns:200px 1fr 240px;gap:12px;align-items:center;padding:10px 14px;background:#FFFAF0;border:1px solid #FDE68A;border-radius:8px;margin-bottom:7px}
+.unk-comp{font-weight:700;font-size:13px;color:var(--p)}
+.unk-ip{font-size:11px;color:var(--muted)}
+.unk-guess{font-size:11px;color:var(--orange);margin-top:2px}
+.unk-ctrl{display:flex;gap:6px;align-items:center}
+select.asgn{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;width:100%;font-family:inherit}
+/* alert */
+.alert{padding:11px 15px;border-radius:8px;font-size:12px;margin-bottom:14px}
+.a-info{background:#EFF6FF;border:1px solid #BFDBFE;color:var(--blue)}
+.a-ok{background:#F0FDF4;border:1px solid #BBF7D0;color:#166534}
+.a-warn{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E}
+/* export */
+.export-btns{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.month-sel{padding:7px 12px;border:1.5px solid var(--g);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)}
+.sep{border:none;border-top:1px solid var(--border);margin:18px 0}
+.hidden{display:none!important}
+.row-idx{color:var(--muted);font-size:11px}
+.notes-bad{color:var(--red);font-size:11px}
+.notes-unc{color:var(--muted);font-style:italic;font-size:11px}
+.score-cell{font-weight:700;font-size:13px}
+.score-100{color:var(--g)}
+.score-90{color:#16A34A}
+.score-80{color:var(--orange)}
+.score-low{color:var(--red)}
+.section-hd{font-size:13px;font-weight:700;color:var(--text);margin:18px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--border)}
+.info-row{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-bottom:12px}
+.cnt-tag{background:var(--g);color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700}
+.unk-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.unk-count{background:var(--orange);color:#fff;border-radius:10px;padding:2px 9px;font-size:11px;font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">부</div>
+  <div>
+    <h1>에이전트 보안점검 현황 자동화<span>부천여성청소년재단</span></h1>
+  </div>
+</header>
+
+<div class="main">
+  <!-- 단계 표시 -->
+  <div class="steps">
+    <div class="step active" id="s1"><span class="step-n">1</span>파일 업로드</div>
+    <div class="step" id="s2"><span class="step-n">2</span>검토 및 할당</div>
+    <div class="step" id="s3"><span class="step-n">3</span>내보내기</div>
+  </div>
+
+  <!-- STEP 1: 업로드 -->
+  <div id="step1">
+    <div class="card">
+      <div class="card-title">에이전트 점검결과 파일 업로드</div>
+      <div class="upload-zone" id="dropZone" onclick="document.getElementById('fi').click()">
+        <div class="upload-icon">📊</div>
+        <h3>엑셀 파일을 여기에 끌어다 놓거나 클릭하여 선택</h3>
+        <p>형식: 에이전트별_점검_결과_현황.xlsx / .xls / .csv</p>
+        <p style="margin-top:8px;font-size:11px;color:#9CA3AF">파일은 브라우저 내에서만 처리되며 외부로 전송되지 않습니다</p>
+      </div>
+      <input type="file" id="fi" accept=".xlsx,.xls,.csv">
+    </div>
+    <div class="card">
+      <div class="card-title">사용 안내</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">
+        <p>① 매월 보안관제 포털에서 내보낸 <b>에이전트별 점검 결과 현황</b> 엑셀 파일을 업로드합니다.</p>
+        <p>② 전화번호부와 자동 대조하여 부서·이름을 매핑합니다. 미확인 기기는 직접 할당합니다.</p>
+        <p>③ 전화번호부 순번 기준으로 정렬된 엑셀 파일을 다운로드합니다.</p>
+        <p style="margin-top:8px;color:#92400E">※ 하드코딩된 예외 규칙: BWYF-712→서원하 / 192.168.150.171→이유림 / 노트북1(0.187)→건강가정(공용) / 전예리 중복 IP 통합</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: 검토 -->
+  <div id="step2" class="hidden">
+    <div id="statsArea" class="stats"></div>
+    <!-- 미확인 기기 -->
+    <div class="card" id="unkCard">
+      <div class="unk-header">
+        <div class="card-title" style="margin-bottom:0">⚠️ 검토 필요 기기</div>
+        <span class="unk-count" id="unkCount">0</span>
+      </div>
+      <div class="alert a-warn" style="margin-bottom:12px">아래 기기는 전화번호부에서 자동 매핑되지 않았습니다. 소속 부서/직원을 지정하거나 공용 PC로 표시하세요.</div>
+      <div class="unk-wrap" id="unkList"></div>
+    </div>
+    <!-- 매핑 결과 미리보기 -->
+    <div class="card">
+      <div class="card-title">📋 자동 매핑 결과 (전화번호부 순서 기준)</div>
+      <div class="info-row">
+        <span class="cnt-tag" id="matchedCount">0</span> 건 자동 매핑
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>부서명</th><th>이름 (컴퓨터이름)</th><th>보안점수</th><th>비고 (특이사항)</th></tr></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-out" onclick="goStep(1)">← 다시 업로드</button>
+      <button class="btn btn-g" id="nextBtn" onclick="goStep(3)">내보내기 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: 내보내기 -->
+  <div id="step3" class="hidden">
+    <div class="card">
+      <div class="card-title">📥 엑셀 파일 내보내기</div>
+      <div class="alert a-ok" id="exportSummary"></div>
+      <div class="sep"></div>
+      <div class="export-btns">
+        <label style="font-size:13px;font-weight:600">보고서 기준 연월:</label>
+        <input type="month" id="reportMonth" class="month-sel">
+        <button class="btn btn-gold" onclick="exportXlsx()">⬇ 엑셀 다운로드 (.xlsx)</button>
+        <button class="btn btn-out btn-sm" onclick="goStep(2)">← 검토로 돌아가기</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">최종 결과 미리보기</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>부서명</th><th>이름 (컴퓨터이름)</th><th>보안점수</th><th>비고 (특이사항)</th></tr></thead>
+          <tbody id="finalBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 전화번호부 데이터 (PDF 등장 순서 기준, 공석 제외)
+// ============================================================
+const DIR = [
+  // 대표이사 / 윤리감사
+  {dept:'대표이사',name:'이강인',title:'대표이사'},
+  {dept:'윤리감사',name:'이정아',title:'직원'},
+  {dept:'윤리감사',name:'이은희',title:'직원'},
+  // 전략경영실
+  {dept:'전략경영실',name:'이은경',title:'실장'},
+  // 전략기획부
+  {dept:'전략기획부',name:'이승봉',title:'부장'},
+  {dept:'전략기획부',name:'이유경',title:'차장',ipHint:'192.168.137'},
+  {dept:'전략기획부',name:'김소연',title:'차장'},
+  {dept:'전략기획부',name:'서원하',title:'차장'},
+  {dept:'전략기획부',name:'김보라',title:'차장'},
+  {dept:'전략기획부',name:'홍미소',title:'차장'},
+  {dept:'전략기획부',name:'김지은',title:'대리'},
+  {dept:'전략기획부',name:'김상민',title:'직원'},
+  // 경영지원부
+  {dept:'경영지원부',name:'이예재',title:'부장'},
+  {dept:'경영지원부',name:'최현서',title:'차장'},
+  {dept:'경영지원부',name:'김지선',title:'대리'},
+  {dept:'경영지원부',name:'오유정',title:'대리'},
+  {dept:'경영지원부',name:'전예리',title:'대리'},
+  {dept:'경영지원부',name:'이하림',title:'대리'},
+  {dept:'경영지원부',name:'오태규',title:'직원'},
+  {dept:'경영지원부',name:'박하나',title:'직원'},
+  // 부천시여성회관
+  {dept:'부천시여성회관',name:'조도자',title:'관장'},
+  {dept:'부천시여성회관',name:'이승주',title:'부장'},
+  {dept:'부천시여성회관',name:'이지원',title:'차장'},
+  {dept:'부천시여성회관',name:'최인우',title:'대리'},
+  {dept:'부천시여성회관',name:'이지선',title:'주임'},
+  {dept:'부천시여성회관',name:'설한솔',title:'직원'},
+  {dept:'부천시여성회관',name:'심혜경',title:'직원'},
+  // 부천여성청소년센터
+  {dept:'부천여성청소년센터',name:'김수경',title:'센터장'},
+  {dept:'부천여성청소년센터',name:'이선미',title:'부장'},
+  {dept:'부천여성청소년센터',name:'신선미',title:'차장'},
+  {dept:'부천여성청소년센터',name:'김미연',title:'차장'},
+  {dept:'부천여성청소년센터',name:'하수정',title:'대리'},
+  {dept:'부천여성청소년센터',name:'김수빈',title:'직원'},
+  {dept:'부천여성청소년센터',name:'민혜진',title:'직원'},
+  {dept:'부천여성청소년센터',name:'양송이',title:'대리'},
+  // 청소년문화의집
+  {dept:'청소년문화의집',name:'장지숙',title:'차장'},
+  {dept:'청소년문화의집',name:'이푸름',title:'대리'},
+  {dept:'청소년문화의집',name:'박근영',title:'직원'},
+  // 방과후아카데미 (여청)
+  {dept:'방과후아카데미(여청)',name:'이정규',title:'주임'},
+  // 청소년카페무지개
+  {dept:'청소년카페무지개',name:'이숙진',title:'주임'},
+  {dept:'청소년카페무지개',name:'오종환',title:'주임'},
+  // 부천시청소년센터
+  {dept:'부천시청소년센터',name:'김홍준',title:'센터장'},
+  {dept:'부천시청소년센터',name:'김성애',title:'부장'},
+  {dept:'참여와락팀',name:'박성희',title:'차장',ipHint:'192.168.137'},
+  {dept:'참여와락팀',name:'신지영',title:'대리'},
+  {dept:'참여와락팀',name:'최민아',title:'직원'},
+  {dept:'문화와락팀',name:'민가원',title:'차장'},
+  {dept:'문화와락팀',name:'유수진',title:'대리'},
+  {dept:'문화와락팀',name:'최준',title:'직원'},
+  // 산울림청소년센터
+  {dept:'산울림청소년센터',name:'양승부',title:'센터장'},
+  {dept:'산울림청소년센터',name:'박성희',title:'부장',ipHint:'192.168.101'},
+  {dept:'청소년활동팀(산울림)',name:'기혜련',title:'차장'},
+  {dept:'청소년활동팀(산울림)',name:'김민선',title:'대리'},
+  {dept:'청소년활동팀(산울림)',name:'임수지',title:'대리'},
+  {dept:'청소년활동팀(산울림)',name:'윤진희',title:'직원'},
+  {dept:'청소년활동팀(산울림)',name:'박예진',title:'직원'},
+  {dept:'청소년활동팀(산울림)',name:'엄수연',title:'직원'},
+  {dept:'청소년활동팀(산울림)',name:'윤남영',title:'직원'},
+  {dept:'청소년지원팀(산울림)',name:'김은영',title:'차장'},
+  {dept:'청소년지원팀(산울림)',name:'송복석',title:'차장'},
+  {dept:'청소년지원팀(산울림)',name:'김준환',title:'차장'},
+  {dept:'청소년지원팀(산울림)',name:'유길호',title:'직원'},
+  {dept:'청소년지원팀(산울림)',name:'김순남',title:'주임'},
+  {dept:'방과후아카데미(산울림)',name:'라단비',title:'주임'},
+  {dept:'방과후아카데미(산울림)',name:'신정윤',title:'직원'},
+  // 소사청소년센터
+  {dept:'소사청소년센터',name:'김미희',title:'센터장'},
+  {dept:'소사청소년센터',name:'김낙현',title:'부장'},
+  {dept:'무한팀(소사)',name:'이미영',title:'차장'},
+  {dept:'무한팀(소사)',name:'정화령',title:'대리'},
+  {dept:'무한팀(소사)',name:'남호석',title:'직원'},
+  {dept:'무한팀(소사)',name:'나필주',title:'직원'},
+  {dept:'창의팀(소사)',name:'이재우',title:'차장'},
+  {dept:'창의팀(소사)',name:'김준호',title:'직원'},
+  {dept:'창의팀(소사)',name:'정지훈',title:'직원'},
+  {dept:'상상팀(소사)',name:'용보라',title:'대리'},
+  {dept:'상상팀(소사)',name:'태진호',title:'대리'},
+  {dept:'상상팀(소사)',name:'유선영',title:'직원'},
+  {dept:'비상팀(소사)',name:'이정희',title:'대리'},
+  {dept:'비상팀(소사)',name:'박희정',title:'직원'},
+  {dept:'방과후아카데미(소사)',name:'권태현',title:'직원'},
+  // ── 우측 열 ──
+  // 청소년상담복지센터
+  {dept:'청소년상담복지센터',name:'백진현',title:'센터장'},
+  {dept:'청소년상담복지센터',name:'양근원',title:'부장'},
+  {dept:'청소년상담복지센터[원미]',name:'김선경',title:'주임',ipHint:'192.168.200'},
+  {dept:'청소년상담복지센터[원미]',name:'신혜선',title:'직원',ipHint:'192.168.200'},
+  {dept:'청소년상담복지센터[원미]',name:'황지희',title:'주임',ipHint:'192.168.200'},
+  {dept:'청소년상담복지센터[원미]',name:'조희진',title:'직원'},
+  {dept:'청소년상담복지센터[원미]',name:'정문선',title:'직원'},
+  {dept:'청소년상담복지센터[원미]',name:'김은령',title:'주임',ipHint:'192.168.200'},
+  {dept:'청소년상담복지센터[원미]',name:'원명호',title:'직원',ipHint:'192.168.200'},
+  {dept:'청소년상담복지센터[원미]',name:'차문도',title:'주임'},
+  {dept:'청소년상담복지센터[원미]',name:'장은정',title:'직원'},
+  {dept:'청소년상담복지센터[원미]',name:'이다솜',title:'직원'},
+  // 오정·소사 센터장 겸직 (백진현 동일인 → sameAs 처리)
+  {dept:'청소년상담복지센터[오정]',name:'백진현',title:'센터장(겸)',sameAs:true},
+  // 오정센터 (센터장 백진현 겸직 - 동일인이므로 별도 행 미포함)
+  {dept:'청소년상담복지센터[오정]',name:'김현숙',title:'차장'},
+  {dept:'청소년상담복지센터[오정]',name:'이유경',title:'직원',ipHint:'192.168.0'},
+  {dept:'청소년상담복지센터[오정]',name:'이경영',title:'직원'},
+  {dept:'청소년상담복지센터[오정]',name:'이선희',title:'직원'},
+  {dept:'청소년상담복지센터[오정]',name:'이영운',title:'직원'},
+  {dept:'청소년상담복지센터[오정]',name:'김아름',title:'대리'},
+  // 소사센터
+  {dept:'청소년상담복지센터[소사]',name:'최진아',title:'차장'},
+  {dept:'청소년상담복지센터[소사]',name:'김현주',title:'주임'},
+  {dept:'청소년상담복지센터[소사]',name:'신수원',title:'직원'},
+  {dept:'청소년상담복지센터[소사]',name:'이지의',title:'직원'},
+  {dept:'청소년상담복지센터[소사]',name:'서승아',title:'주임'},
+  {dept:'청소년상담복지센터[소사]',name:'이아람',title:'대리'},
+  {dept:'청소년상담복지센터[소사]',name:'이호섭',title:'직원'},
+  {dept:'청소년상담복지센터[소사]',name:'전유정',title:'직원'},
+  {dept:'청소년상담복지센터[소사]',name:'백진현',title:'센터장(겸)',sameAs:true},
+  // 꿈드림[소사]
+  {dept:'꿈드림[소사]',name:'김애영',title:'주임',ipHint:'192.168.100'},
+  {dept:'꿈드림[소사]',name:'이세나',title:'주임',ipHint:'192.168.100'},
+  {dept:'꿈드림[소사]',name:'고가영',title:'직원',ipHint:'192.168.100'},
+  {dept:'꿈드림[소사]',name:'김미선',title:'직원',ipHint:'192.168.100'},
+  {dept:'꿈드림[소사]',name:'오회옥',title:'직원',ipHint:'192.168.100'},
+  {dept:'꿈드림[소사]',name:'신홍철',title:'직원',ipHint:'192.168.100'},
+  {dept:'꿈드림[소사]',name:'이지훈',title:'직원',ipHint:'192.168.100'},
+  {dept:'꿈드림[소사]',name:'박예지',title:'직원',ipHint:'192.168.100'},
+  {dept:'꿈드림[소사]',name:'이다은',title:'직원'},
+  {dept:'꿈드림[소사]',name:'최문정',title:'직원'},
+  {dept:'꿈드림[소사]',name:'장윤희',title:'직원'},
+  // 건강가정지원센터
+  {dept:'부천시건강가정지원센터',name:'김윤경',title:'센터장'},
+  {dept:'부천시건강가정지원센터',name:'정소라',title:'과장'},
+  {dept:'운영지원팀(건강가정)',name:'최원진',title:'직원'},
+  {dept:'운영지원팀(건강가정)',name:'서하린',title:'직원'},
+  {dept:'운영지원팀(건강가정)',name:'박보름',title:'직원'},
+  {dept:'가족사업팀',name:'신동은',title:'팀장'},
+  {dept:'가족사업팀',name:'정지수',title:'선임'},
+  {dept:'가족사업팀',name:'양서영',title:'선임'},
+  {dept:'가족사업팀',name:'김수연',title:'직원'},
+  {dept:'가족사업팀',name:'김나라',title:'직원'},
+  {dept:'가족사업팀',name:'권정은',title:'직원'},
+  {dept:'가족사업팀',name:'박지예',title:'직원'},
+  {dept:'가족사업팀',name:'박희진',title:'직원'},
+  {dept:'아이돌봄지원사업팀',name:'강예진',title:'팀장'},
+  {dept:'아이돌봄지원사업팀',name:'윤영득',title:'직원'},
+  {dept:'아이돌봄지원사업팀',name:'고연주',title:'직원'},
+  {dept:'아이돌봄지원사업팀',name:'이수영',title:'직원'},
+  {dept:'아이돌봄지원사업팀',name:'배고은',title:'직원'},
+  {dept:'아이돌봄지원사업팀',name:'피의정',title:'직원'},
+  {dept:'아이돌봄지원사업팀',name:'박누리',title:'직원'},
+  // 고리울청소년센터
+  {dept:'고리울청소년센터',name:'신용식',title:'센터장'},
+  {dept:'고리울청소년센터',name:'이서경',title:'부장'},
+  {dept:'운영지원팀(고리울)',name:'우윤지',title:'직원'},
+  {dept:'활동지원팀(고리울)',name:'정수연',title:'팀장'},
+  {dept:'활동지원팀(고리울)',name:'한우진',title:'직원'},
+  {dept:'활동지원팀(고리울)',name:'김효진',title:'직원'},
+  {dept:'활동지원팀(고리울)',name:'성재윤',title:'직원'},
+  {dept:'친화마을팀(고리울)',name:'전서희',title:'팀장'},
+  {dept:'친화마을팀(고리울)',name:'서병일',title:'직원'},
+  {dept:'친화마을팀(고리울)',name:'안지선',title:'직원'},
+  {dept:'친화마을팀(고리울)',name:'국재영',title:'직원'},
+  {dept:'방과후아카데미(고리울)',name:'신은실',title:'팀장'},
+  {dept:'방과후아카데미(고리울)',name:'양도현',title:'담임'},
+  {dept:'방과후아카데미(고리울)',name:'장보현',title:'담임'},
+  // 일·쉼지원센터
+  {dept:'부천시일·쉼지원센터',name:'김수정',title:'센터장'},
+  {dept:'부천시일·쉼지원센터',name:'김숙희',title:'총괄팀장'},
+  {dept:'부천시일·쉼지원센터',name:'김미선',title:'직원',ipHint:'192.168.150'},
+  {dept:'부천시일·쉼지원센터',name:'백승아',title:'직원',ipHint:'192.168.150'},
+  {dept:'부천시일·쉼지원센터',name:'윤준영',title:'직원',ipHint:'192.168.150'},
+  {dept:'부천시일·쉼지원센터',name:'오나영',title:'직원',ipHint:'192.168.150'},
+  {dept:'부천시일·쉼지원센터',name:'이유림',title:'직원',ipHint:'192.168.150'},
+].map((e,i)=>({...e,idx:i+1}));
+
+// ============================================================
+// 점검항목 약어 매핑
+// ============================================================
+const CHECK_COLS = [
+  {key:'악성코드 백신 설치 및 실행 점검', short:'백신 미설치/미실행'},
+  {key:'악성코드 백신 최신 보안 패치 점검', short:'백신 패치 취약'},
+  {key:'운영체제, MS Office 최신 보안 패치 점검', short:'OS/Office 패치 취약'},
+  {key:'한글 프로그램 최신 보안 패치 점검', short:'한글 패치 취약'},
+  {key:'로그온 패스워드 안전성 점검', short:'패스워드 안전성 취약'},
+  {key:'로그온 패스워드 사용 기간 점검', short:'패스워드 기간 초과'},
+  {key:'화면 보호기 설정 점검', short:'화면보호기 미설정'},
+  {key:'사용자 공유 폴더 설정 점검', short:'공유폴더 노출'},
+  {key:'USB 자동 실행 설정 점검', short:'USB 자동실행 취약'},
+  {key:'미사용 ActiveX 프로그램 점검', short:'ActiveX 취약'},
+];
+
+// IP 대역 → 부서 추정
+const IP_DEPT = [
+  {prefix:'192.168.137', dept:'전략경영실/본부'},
+  {prefix:'192.168.200', dept:'청소년상담복지센터[원미]'},
+  {prefix:'192.168.100', dept:'청소년상담복지센터'},
+  {prefix:'192.168.101', dept:'산울림청소년센터'},
+  {prefix:'192.168.150', dept:'부천시일·쉼지원센터'},
+  {prefix:'10.180.39',   dept:'소사청소년센터'},
+  {prefix:'172.16.1',    dept:'부천여성청소년센터'},
+  {prefix:'192.168.0',   dept:'건강가정지원센터/오정'},
+  {prefix:'192.168.1',   dept:'청소년상담복지센터'},
+];
+
+// ============================================================
+// 전역 상태
+// ============================================================
+let agentRows = [];      // 파싱된 에이전트 데이터
+let matchedMap = {};     // dirIdx → agentRow
+let unknownRows = [];    // 미매핑 에이전트 rows
+let assignments = {};    // unknownId → {dirIdx|customDept, customName, compName}
+let currentStep = 1;
+
+// ============================================================
+// 파일 입력 처리
+// ============================================================
+const dropZone = document.getElementById('dropZone');
+const fi = document.getElementById('fi');
+
+dropZone.addEventListener('dragover', e=>{e.preventDefault();dropZone.classList.add('over')});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e=>{
+  e.preventDefault(); dropZone.classList.remove('over');
+  if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+});
+fi.addEventListener('change', e=>{ if(e.target.files[0]) processFile(e.target.files[0]); });
+
+function processFile(file){
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      // 헤더 행 찾기
+      let hIdx = -1;
+      for(let i=0;i<raw.length;i++){
+        if(raw[i].some(c=>String(c).trim()==='컴퓨터 이름')){hIdx=i;break;}
+      }
+      if(hIdx<0){alert('컴퓨터 이름 열을 찾을 수 없습니다. 파일 형식을 확인하세요.');return;}
+      const headers = raw[hIdx].map(h=>String(h).trim());
+      agentRows = raw.slice(hIdx+1)
+        .filter(r=>r.some(c=>c!==''))
+        .map(r=>{
+          const obj={};
+          headers.forEach((h,i)=>obj[h]=String(r[i]??'').trim());
+          return obj;
+        });
+      doMapping();
+      goStep(2);
+    }catch(err){alert('파일 파싱 오류: '+err.message);}
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ============================================================
+// 매핑 로직
+// ============================================================
+function getIPPrefix(ip){
+  for(const d of IP_DEPT) if(ip.startsWith(d.prefix)) return d.dept;
+  return '';
+}
+
+function buildNotes(row){
+  const status = row['구분']||'';
+  if(status==='미점검'||(row['보안 점수']===''&&row['점검 완료 시간']==='')) return '미점검';
+  const bads = [];
+  for(const cc of CHECK_COLS){
+    const v = row[cc.key]||'';
+    if(v==='취약') bads.push(cc.short);
+    // 한글 미설치 PC는 점검 자체가 불가 → 별도 표기
+    if(cc.key==='한글 프로그램 최신 보안 패치 점검' && v==='점검 불가')
+      bads.push('한글 점검불가(미설치)');
+  }
+  return bads.join(', ');
+}
+
+function extractNameFromComp(compName){
+  // 직접 포함 여부 검사
+  for(const d of DIR){
+    if(d.name && compName.includes(d.name)) return d;
+  }
+  // '-' 뒤 이름 시도: "상담-신혜선" → "신혜선"
+  const parts = compName.split(/[-_]/);
+  for(const p of parts){
+    const trimmed = p.trim();
+    const found = DIR.find(d=>d.name===trimmed);
+    if(found) return found;
+  }
+  return null;
+}
+
+function findDirEntry(compName, ip){
+  // sameAs(겸직) 엔트리는 이름 매핑에서 제외
+  const exact = DIR.filter(d=>d.name===compName && !d.sameAs);
+  if(exact.length===1) return {entry:exact[0], matchType:'exact'};
+  if(exact.length>1){
+    // IP 힌트로 구분
+    const hinted = exact.find(d=>d.ipHint && ip.startsWith(d.ipHint));
+    if(hinted) return {entry:hinted, matchType:'exact_ip'};
+    return {entry:exact[0], matchType:'exact_ambiguous', all:exact};
+  }
+  // 부분 이름 매핑 (컴퓨터이름 내 성명 포함)
+  const partial = extractNameFromComp(compName);
+  if(partial) return {entry:partial, matchType:'partial'};
+  return null;
+}
+
+function doMapping(){
+  matchedMap = {};
+  unknownRows = [];
+  assignments = {};
+
+  // 전예리 중복 통합: 192.168.137.166 행은 스킵 (137.16이 실제 데이터)
+  const skipKey = '192.168.137.166-전예리';
+
+  // 하드코딩 예외 사전 처리
+  const HARDCODED = [
+    {test:r=>r['컴퓨터 이름']==='BWYF-712'&&r['IP 주소'].startsWith('192.168.137'),
+      resolve:()=>{const e=DIR.find(d=>d.name==='서원하');return{entry:e,compName:'BWYF-712'}}},
+    {test:r=>r['IP 주소']==='192.168.150.171',
+      resolve:()=>{const e=DIR.find(d=>d.name==='이유림');return{entry:e,compName:r=>r['컴퓨터 이름']}}},
+    {test:r=>r['컴퓨터 이름']==='노트북1'&&r['IP 주소']==='192.168.0.187',
+      resolve:()=>({entry:null,customDept:'부천시건강가정지원센터',customName:'(공용)',compName:'노트북1'})},
+    // 대표이사 컴퓨터
+    {test:r=>r['컴퓨터 이름']==='대표이사',
+      resolve:()=>{const e=DIR.find(d=>d.name==='이강인');return{entry:e,compName:'대표이사'}}},
+  ];
+
+  for(const row of agentRows){
+    const ip    = row['IP 주소']||'';
+    const comp  = row['컴퓨터 이름']||'';
+    const rowKey= ip+'-'+comp;
+
+    // 전예리 중복 스킵
+    if(rowKey===skipKey) continue;
+
+    let mapped = false;
+
+    // 하드코딩 예외 체크
+    for(const hc of HARDCODED){
+      if(hc.test(row)){
+        const res = hc.resolve(row);
+        const cn  = typeof res.compName==='function'? res.compName(row): (res.compName||comp);
+        if(res.entry){
+          const idx = res.entry.idx;
+          if(!matchedMap[idx]||parseInt(row['보안 점수']||0)>parseInt(matchedMap[idx].score||0)){
+            matchedMap[idx]={...res.entry,compName:cn,score:row['보안 점수'],notes:buildNotes(row),row};
+          }
+        } else {
+          // 공용 PC → 전화번호부 외 추가
+          const uid='pub_'+Object.keys(assignments).length;
+          assignments[uid]={customDept:res.customDept,customName:res.customName,compName:cn,score:row['보안 점수'],notes:buildNotes(row),row};
+        }
+        mapped=true; break;
+      }
+    }
+    if(mapped) continue;
+
+    // 일반 이름 매핑
+    const found = findDirEntry(comp, ip);
+    if(found){
+      const {entry, matchType, all} = found;
+      if(matchType==='exact_ambiguous'){
+        // 다중 동명이인 → 미확인 처리
+        unknownRows.push({id:'unk_'+unknownRows.length,row,comp,ip,guessedDept:getIPPrefix(ip),ambiguous:all});
+        continue;
+      }
+      const idx = entry.idx;
+      if(matchedMap[idx]){
+        // 동일인의 두 번째 PC → 높은 점수 채택 후 'PC 2대 운영' 표기
+        const existScore = parseInt(matchedMap[idx].score||0);
+        const newScore   = parseInt(row['보안 점수']||0);
+        if(newScore > existScore)
+          matchedMap[idx]={...entry,compName:comp,score:row['보안 점수'],notes:buildNotes(row),row,matchType};
+        if(!matchedMap[idx].notes.includes('PC 2대'))
+          matchedMap[idx].notes = matchedMap[idx].notes
+            ? matchedMap[idx].notes+', PC 2대 운영' : 'PC 2대 운영';
+      } else {
+        matchedMap[idx]={...entry,compName:comp,score:row['보안 점수'],notes:buildNotes(row),row,matchType};
+      }
+    } else {
+      unknownRows.push({id:'unk_'+unknownRows.length,row,comp,ip,guessedDept:getIPPrefix(ip)});
+    }
+  }
+}
+
+// ============================================================
+// UI 렌더링
+// ============================================================
+function goStep(n){
+  currentStep=n;
+  [1,2,3].forEach(i=>{
+    document.getElementById('step'+i).classList.toggle('hidden',i!==n);
+    const s=document.getElementById('s'+i);
+    s.className='step'+(i<n?' done':i===n?' active':'');
+  });
+  if(n===2) renderStep2();
+  if(n===3) renderStep3();
+}
+
+function renderStep2(){
+  // 통계
+  const total = DIR.length;
+  const matched = Object.keys(matchedMap).length + Object.keys(assignments).filter(k=>k.startsWith('pub_')).length;
+  const unkCnt = unknownRows.length;
+  const dangerCnt = Object.values(matchedMap).filter(m=>{const s=parseInt(m.score||0);return s>0&&s<80}).length;
+  const warnCnt = Object.values(matchedMap).filter(m=>{const s=parseInt(m.score||0);return s>=80&&s<100}).length;
+  document.getElementById('statsArea').innerHTML=`
+    <div class="stat"><div class="stat-n">${total}</div><div class="stat-l">전화번호부 인원</div></div>
+    <div class="stat"><div class="stat-n">${matched}</div><div class="stat-l">자동 매핑</div></div>
+    <div class="stat warn"><div class="stat-n">${warnCnt}</div><div class="stat-l">취약 (80~99점)</div></div>
+    <div class="stat danger"><div class="stat-n">${dangerCnt}</div><div class="stat-l">심각 (~79점)</div></div>
+    <div class="stat pur"><div class="stat-n">${unkCnt}</div><div class="stat-l">검토 필요</div></div>
+  `;
+
+  // 미확인 기기
+  document.getElementById('unkCount').textContent=unkCnt;
+  if(unkCnt===0){
+    document.getElementById('unkCard').classList.add('hidden');
+  } else {
+    document.getElementById('unkCard').classList.remove('hidden');
+    const listEl=document.getElementById('unkList');
+    listEl.innerHTML='';
+    unknownRows.forEach(u=>{
+      const optHtml = buildAssignOptions(u);
+      const div=document.createElement('div');
+      div.className='unk-item';
+      div.innerHTML=`
+        <div>
+          <div class="unk-comp">${u.comp}</div>
+          <div class="unk-ip">${u.ip}</div>
+          <div class="unk-guess">${u.guessedDept?'추정: '+u.guessedDept:''} ${u.ambiguous?'[동명이인]':''}</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted)">
+          점수: ${u.row['보안 점수']||'미점검'} | 구분: ${u.row['구분']||'-'}
+        </div>
+        <div class="unk-ctrl">
+          <select class="asgn" data-id="${u.id}" onchange="assignUnknown('${u.id}',this.value)">
+            <option value="">-- 할당 선택 --</option>
+            <option value="PUBLIC">🖥️ 공용 PC / 기타</option>
+            <option value="IGNORE">❌ 제외 (출력 안 함)</option>
+            <optgroup label="── 전화번호부 ──">
+            ${optHtml}
+            </optgroup>
+          </select>
+        </div>
+      `;
+      listEl.appendChild(div);
+    });
+  }
+
+  // 매핑 미리보기
+  renderTable('previewBody', false);
+  document.getElementById('matchedCount').textContent=Object.keys(matchedMap).length;
+
+  // 다음 버튼 상태
+  document.getElementById('nextBtn').disabled = unknownRows.some(u=>!assignments[u.id]);
+}
+
+function buildAssignOptions(u){
+  // 동명이인 후보가 있으면 상단에
+  let opts='';
+  if(u.ambiguous){
+    opts += u.ambiguous.map(e=>`<option value="${e.idx}" style="font-weight:700">★ ${e.dept} ${e.name}</option>`).join('');
+    opts += '<option disabled>──────────</option>';
+  }
+  opts += DIR.map(e=>`<option value="${e.idx}">${e.dept} – ${e.name}</option>`).join('');
+  return opts;
+}
+
+function assignUnknown(id, val){
+  if(val===''){delete assignments[id];}
+  else if(val==='PUBLIC'){assignments[id]={customDept:guessedDeptById(id),customName:'(공용)',isPublic:true};}
+  else if(val==='IGNORE'){assignments[id]={ignore:true};}
+  else{
+    const idx=parseInt(val);
+    const entry=DIR.find(d=>d.idx===idx);
+    if(entry) assignments[id]={dirIdx:idx,entry};
+  }
+  // 미확인 모두 할당됐는지 확인
+  const allDone=unknownRows.every(u=>assignments[u.id]);
+  document.getElementById('nextBtn').disabled=!allDone;
+  renderTable('previewBody', false);
+}
+
+function guessedDeptById(id){
+  const u=unknownRows.find(x=>x.id===id);
+  return u?u.guessedDept:'';
+}
+
+function buildFinalRows(){
+  const rows=[];
+  // 1. 전화번호부 기준 전체 행
+  for(const entry of DIR){
+    if(entry.sameAs){
+      // 겸직 행: 주 엔트리(동명 비겸직)의 점검 결과를 복사
+      const primary = DIR.find(d=>d.name===entry.name && !d.sameAs);
+      const m = primary ? matchedMap[primary.idx] : null;
+      rows.push({dirIdx:entry.idx, dept:entry.dept, name:entry.name,
+        compName: m ? m.compName : null,
+        score: m ? m.score : '',
+        notes: m ? (m.notes ? m.notes+' (겸직)' : '겸직') : '미점검(겸직)'});
+      continue;
+    }
+    const m=matchedMap[entry.idx];
+    if(m){
+      rows.push({dirIdx:entry.idx,dept:entry.dept,name:entry.name,compName:m.compName,
+        score:m.score,notes:m.notes,matchType:m.matchType});
+    } else {
+      rows.push({dirIdx:entry.idx,dept:entry.dept,name:entry.name,compName:null,
+        score:'',notes:'미점검'});
+    }
+  }
+  // 2. 미확인 기기 반영
+  for(const u of unknownRows){
+    const asgn=assignments[u.id];
+    if(!asgn||asgn.ignore) continue;
+    if(asgn.dirIdx){
+      // 전화번호부 항목에 덮어쓰기
+      const existing=rows.find(r=>r.dirIdx===asgn.dirIdx);
+      if(existing){
+        existing.compName=u.comp;
+        existing.score=u.row['보안 점수'];
+        existing.notes=buildNotes(u.row);
+      }
+    } else {
+      // 공용 PC → 맨 끝에 추가
+      rows.push({dirIdx:9999,dept:asgn.customDept||u.guessedDept||'미확인',
+        name:asgn.customName||u.comp,compName:u.comp,
+        score:u.row['보안 점수'],notes:buildNotes(u.row)});
+    }
+  }
+  // 3. pub_ assignments (공용 하드코딩)
+  for(const [k,v] of Object.entries(assignments)){
+    if(k.startsWith('pub_')){
+      rows.push({dirIdx:9999,dept:v.customDept||'',name:v.customName||'',
+        compName:v.compName,score:v.score,notes:v.notes});
+    }
+  }
+  rows.sort((a,b)=>a.dirIdx-b.dirIdx);
+  return rows;
+}
+
+function scoreClass(sc){
+  const n=parseInt(sc);
+  if(isNaN(n)||sc==='') return '';
+  if(n===100) return 'score-100';
+  if(n>=90) return 'score-90';
+  if(n>=80) return 'score-80';
+  return 'score-low';
+}
+function rowClass(sc,notes){
+  if(notes==='미점검') return 'unchecked-row';
+  const n=parseInt(sc);
+  if(isNaN(n)||n===100) return 'safe-row';
+  if(n>=90) return 'warn-row';
+  return 'danger-row';
+}
+function scoreBadge(sc,notes){
+  if(notes==='미점검') return '<span class="badge b-unc">미점검</span>';
+  const n=parseInt(sc);
+  if(isNaN(n)) return '<span class="badge b-unc">-</span>';
+  if(n===100) return '<span class="badge b-safe">100</span>';
+  if(n>=90)   return '<span class="badge b-warn">'+n+'</span>';
+  return '<span class="badge b-danger">'+n+'</span>';
+}
+
+function renderTable(tbodyId, isFinal){
+  const rows=buildFinalRows();
+  const tb=document.getElementById(tbodyId);
+  tb.innerHTML='';
+  rows.forEach((r,i)=>{
+    const nameDisplay = r.compName && r.compName!==r.name && r.compName!=='미점검'
+      ? `${r.name}<span style="color:var(--muted);font-size:10px;margin-left:3px">(${r.compName})</span>`
+      : r.name;
+    const notesHtml = r.notes==='미점검'
+      ? '<span class="notes-unc">미점검</span>'
+      : r.notes
+        ? '<span class="notes-bad">'+r.notes+'</span>'
+        : '<span style="color:var(--g);font-size:11px">이상없음</span>';
+    const tr=document.createElement('tr');
+    tr.className=rowClass(r.score,r.notes);
+    tr.innerHTML=`
+      <td class="row-idx">${i+1}</td>
+      <td>${r.dept}</td>
+      <td>${nameDisplay}</td>
+      <td class="score-cell">${scoreBadge(r.score,r.notes)}</td>
+      <td>${notesHtml}</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+function renderStep3(){
+  renderTable('finalBody', true);
+  const rows=buildFinalRows();
+  const total=rows.length;
+  const safe=rows.filter(r=>r.score==='100'||parseInt(r.score)===100).length;
+  const vuln=rows.filter(r=>{const n=parseInt(r.score);return !isNaN(n)&&n<100&&n>0}).length;
+  const unc=rows.filter(r=>r.notes==='미점검').length;
+  document.getElementById('exportSummary').innerHTML=
+    `총 <b>${total}</b>건 | 안전 <b>${safe}</b> / 취약 <b>${vuln}</b> / 미점검 <b>${unc}</b>`;
+  // 기본 연월 설정
+  const now=new Date();
+  document.getElementById('reportMonth').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+}
+
+// ============================================================
+// 엑셀 내보내기
+// ============================================================
+function exportXlsx(){
+  const rows=buildFinalRows();
+  const monthVal=document.getElementById('reportMonth').value||'';
+  let yearM='';
+  if(monthVal){
+    const [y,m]=monthVal.split('-');
+    yearM=y+'년_'+parseInt(m)+'월';
+  }
+  const filename=(yearM?yearM+'_':'')+'에이전트_보안점검결과.xlsx';
+
+  const wsData=[['부서명','이름(컴퓨터 이름)','보안점수','비고(특이사항)']];
+  rows.forEach(r=>{
+    const nameCol = r.compName && r.compName!==r.name
+      ? r.name+'('+r.compName+')'
+      : r.name;
+    wsData.push([r.dept, nameCol, r.notes==='미점검'?'미점검':(r.score||''), r.notes]);
+  });
+
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+
+  // 열 너비
+  ws['!cols']=[{wch:30},{wch:22},{wch:10},{wch:50}];
+
+  // 헤더 스타일 (기본 지원 안 하지만 셀 ref 저장)
+  XLSX.utils.book_append_sheet(wb, ws, '보안점검결과');
+
+  // 메타 정보 시트
+  const meta=[
+    ['생성일시', new Date().toLocaleString('ko-KR')],
+    ['기준연월', monthVal],
+    ['총인원', rows.length],
+    ['안전(100점)', rows.filter(r=>parseInt(r.score)===100).length],
+    ['취약(<100점)', rows.filter(r=>{const n=parseInt(r.score);return !isNaN(n)&&n<100&&n>0}).length],
+    ['미점검', rows.filter(r=>r.notes==='미점검').length],
+  ];
+  const wsMeta=XLSX.utils.aoa_to_sheet(meta);
+  XLSX.utils.book_append_sheet(wb, wsMeta, '요약');
+
+  XLSX.writeFile(wb, filename);
+}
+</script>
+</body>
+</html>
