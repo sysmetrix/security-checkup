@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -262,6 +263,24 @@ body.has-sticky{padding-bottom:72px}
   header{background:var(--hd)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   a{display:none}
 }
+
+/* 부서별 미리보기 모달 */
+.dept-preview-row{display:flex;align-items:center;padding:9px 14px;
+  border-bottom:1px solid var(--border);transition:background .15s}
+.dept-preview-row:hover{background:var(--bg)}
+.dept-preview-row.excluded{opacity:.4}
+.dept-preview-row:last-child{border-bottom:none}
+.dept-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;
+  border-radius:10px;font-size:10px;font-weight:700}
+.badge-ok{background:#D1FAE5;color:#065F46}
+.badge-warn{background:#FEF3C7;color:#92400E}
+.badge-issue{background:#FEE2E2;color:#991B1B}
+.dept-preview-stats{display:flex;gap:16px;font-size:12px}
+.preview-opt{display:flex;align-items:center;gap:8px;padding:10px 14px;
+  background:var(--bg);border-radius:8px;margin-bottom:12px}
+.preview-opt label{display:flex;align-items:center;gap:7px;font-size:13px;
+  cursor:pointer;font-weight:500}
+.preview-opt input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--g)}
 </style>
 </head>
 <body>
@@ -2866,6 +2885,176 @@ function printPage(){
   window.print();
 }
 
+// ============================================================
+// 부서별 보고서 ZIP 생성
+// ============================================================
+
+function showDeptPreview(){
+  renderDeptPreview();
+  document.getElementById('deptPreviewModal').classList.remove('hidden');
+}
+function closeDeptPreview(){
+  document.getElementById('deptPreviewModal').classList.add('hidden');
+}
+
+function _buildDeptGroups(){
+  const rows=buildFinalRows();
+  const map={};
+  for(const r of rows){
+    const g=getDeptGroup(r.dept);
+    if(!map[g]) map[g]=[];
+    map[g].push(r);
+  }
+  // DEPT_ORDER 순으로 정렬
+  return Object.entries(map).sort((a,b)=>deptOrderIdx(a[0])-deptOrderIdx(b[0]));
+}
+
+function renderDeptPreview(){
+  const groups=_buildDeptGroups();
+  const onlyIssues=document.getElementById('onlyIssues')?.checked||false;
+  const listEl=document.getElementById('deptPreviewList');
+  const cntEl=document.getElementById('deptFileCount');
+  if(!listEl) return;
+
+  listEl.innerHTML='';
+  let included=0;
+
+  groups.forEach(([dept,deptRows])=>{
+    const safe=deptRows.filter(r=>parseInt(r.score)===100).length;
+    const vuln=deptRows.filter(r=>{const n=parseInt(r.score);return !isNaN(n)&&n>0&&n<100;}).length;
+    const unc=deptRows.filter(r=>r.notes==='미점검'||r.notes==='미점검(겸직)').length;
+    const hasIssues=vuln>0||unc>0;
+    const willInclude=!onlyIssues||hasIssues;
+    if(willInclude) included++;
+
+    const statusBadge=hasIssues
+      ?(vuln>0?`<span class="dept-badge badge-issue">취약 ${vuln}건</span>`:`<span class="dept-badge badge-warn">미점검</span>`)
+      :`<span class="dept-badge badge-ok">이상없음</span>`;
+
+    const div=document.createElement('div');
+    div.className='dept-preview-row'+(willInclude?'':' excluded');
+    div.innerHTML=`
+      <span style="flex:1;font-size:13px;font-weight:${hasIssues?600:400}">${dept}</span>
+      <div class="dept-preview-stats">
+        <span style="min-width:40px;text-align:center;font-weight:600">${deptRows.length}</span>
+        <span style="min-width:40px;text-align:center;color:var(--g);font-weight:600">${safe}</span>
+        <span style="min-width:40px;text-align:center;color:${vuln?'var(--orange)':'var(--muted)'};font-weight:${vuln?700:400}">${vuln}</span>
+        <span style="min-width:40px;text-align:center;color:var(--muted)">${unc}</span>
+      </div>
+      <div style="min-width:60px;text-align:right;margin-left:8px">${statusBadge}</div>
+    `;
+    listEl.appendChild(div);
+  });
+
+  if(cntEl) cntEl.textContent=`📄 ${included}개 파일 생성 예정`;
+  const btn=document.getElementById('deptGenerateBtn');
+  if(btn) btn.disabled=included===0;
+}
+
+async function doExportDeptZip(){
+  const btn=document.getElementById('deptGenerateBtn');
+  const orig=btn?btn.textContent:'';
+  if(btn){btn.textContent='생성 중...';btn.disabled=true;}
+
+  try{
+    if(typeof JSZip==='undefined') throw new Error('JSZip 로드 중입니다. 잠시 후 다시 시도하세요.');
+
+    const mv=getReportMonth();
+    const onlyIssues=document.getElementById('onlyIssues')?.checked||false;
+    const groups=_buildDeptGroups();
+
+    // 파일명 접두사: 26년 06월 PC점검결과_
+    let prefix='PC점검결과_';
+    if(mv){
+      const [y,m]=mv.split('-');
+      prefix=y.slice(2)+'년 '+m.padStart(2,'0')+'월 PC점검결과_';
+    }
+
+    const zip=new JSZip();
+    let count=0;
+
+    for(const [dept,deptRows] of groups){
+      const vuln=deptRows.filter(r=>{const n=parseInt(r.score);return !isNaN(n)&&n>0&&n<100;}).length;
+      const unc=deptRows.filter(r=>r.notes==='미점검'||r.notes==='미점검(겸직)').length;
+      if(onlyIssues&&!vuln&&!unc) continue;
+
+      const wb=XLSX.utils.book_new();
+
+      // ① 점검결과 시트 (IP 제외)
+      const ws1Data=[['부서명','이름(컴퓨터이름)','보안점수','비고(특이사항)']];
+      deptRows.forEach(r=>{
+        const nc=r.compName&&r.compName!==r.name?r.name+'('+r.compName+')':r.name;
+        ws1Data.push([r.dept,nc,r.notes==='미점검'?'미점검':(r.score||''),r.notes]);
+      });
+      const ws1=XLSX.utils.aoa_to_sheet(ws1Data);
+      ws1['!cols']=[{wch:28},{wch:22},{wch:10},{wch:48}];
+      XLSX.utils.book_append_sheet(wb,ws1,'점검결과');
+
+      // ② 요약 시트
+      const safe=deptRows.filter(r=>parseInt(r.score)===100).length;
+      const rate=deptRows.length?Math.round((safe+vuln)/deptRows.length*100):0;
+      const ws2=XLSX.utils.aoa_to_sheet([
+        ['기관명',dept],['기준연월',mv||''],['총인원',deptRows.length],
+        ['안전(100점)',safe],['취약(<100점)',vuln],['미점검',unc],['점검률',rate+'%'],
+      ]);
+      ws2['!cols']=[{wch:14},{wch:24}];
+      XLSX.utils.book_append_sheet(wb,ws2,'요약');
+
+      // ③ 조치필요 시트 (취약·미점검 있을 때만)
+      const issueRows=deptRows.filter(r=>{
+        const sc=parseInt(r.score);
+        return r.notes==='미점검'||r.notes==='미점검(겸직)'||(!isNaN(sc)&&sc>0&&sc<100);
+      });
+      if(issueRows.length>0){
+        const ws3Data=[['부서명','이름(컴퓨터이름)','보안점수','조치 필요 항목']];
+        issueRows.forEach(r=>{
+          const nc=r.compName&&r.compName!==r.name?r.name+'('+r.compName+')':r.name;
+          ws3Data.push([r.dept,nc,r.notes==='미점검'?'미점검':(r.score||''),r.notes]);
+        });
+        const ws3=XLSX.utils.aoa_to_sheet(ws3Data);
+        ws3['!cols']=[{wch:28},{wch:22},{wch:10},{wch:48}];
+        XLSX.utils.book_append_sheet(wb,ws3,'조치필요');
+      }
+
+      // ④ 취약항목분석 시트 (해당 부서 기준)
+      const deptVuln=buildVulnAnalysis(deptRows);
+      if(deptVuln.length>0){
+        const checkedCnt=deptRows.filter(r=>r.row&&!r.isSameAs).length;
+        const vd=[['취약 항목','건수','비율']];
+        deptVuln.forEach(([label,cnt])=>{
+          vd.push([label,cnt,checkedCnt?Math.round(cnt/checkedCnt*100)+'%':'-%']);
+        });
+        const ws4=XLSX.utils.aoa_to_sheet(vd);
+        ws4['!cols']=[{wch:28},{wch:8},{wch:8}];
+        XLSX.utils.book_append_sheet(wb,ws4,'취약항목분석');
+      }
+
+      // ZIP에 추가
+      const xlsxArr=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+      zip.file(prefix+dept+'.xlsx',xlsxArr);
+      count++;
+    }
+
+    if(count===0){alert('생성할 파일이 없습니다.');return;}
+
+    const zipBlob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const link=document.createElement('a');
+    const zipName=(mv?mv.replace('-','_')+'_':'')+'부서별_PC점검결과.zip';
+    link.href=URL.createObjectURL(zipBlob);
+    link.download=zipName;
+    link.click();
+    URL.revokeObjectURL(link.href);
+
+    closeDeptPreview();
+    alert('✅ '+count+'개 부서 파일 ZIP 생성 완료');
+  }catch(e){
+    alert('ZIP 생성 실패: '+e.message);
+  }
+
+  if(btn){btn.textContent=orig;btn.disabled=false;}
+}
+
+
 </script>
 
 <!-- 사전 매핑 규칙 설정 모달 -->
@@ -3035,7 +3224,8 @@ function printPage(){
         <select id="reportMonthSel" class="month-sel" style="padding:6px 8px;font-size:12px;min-width:60px" onchange="updateReportMonth()"></select>
         <span style="font-size:12px;color:var(--muted)">월</span>
       </div>
-      <button class="btn btn-gold" id="stickyExportBtn" onclick="exportXlsx()">📥 보고서 다운로드<span style="font-size:10px;opacity:.7;margin-left:4px">(.xlsx)</span></button>
+      <button class="btn btn-gold" id="stickyExportBtn" onclick="exportXlsx()">📊 총괄 보고서</button>
+      <button class="btn btn-g" onclick="showDeptPreview()">📦 부서별 보고서</button>
       <!-- 대시보드 저장 드롭다운 -->
       <div class="save-dropdown" id="saveDrop">
         <button class="btn" style="background:var(--hd);color:#fff" onclick="toggleSaveDrop(event)">💾 대시보드 저장 ▾</button>
@@ -3051,6 +3241,53 @@ function printPage(){
         </div>
       </div>
       <button class="btn btn-out" onclick="printPage()" title="대시보드 인쇄">🖨</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- 부서별 보고서 미리보기 모달 -->
+<div id="deptPreviewModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-hd">
+      <h2>📦 부서별 보고서 생성</h2>
+      <button class="modal-close" onclick="closeDeptPreview()">✕</button>
+    </div>
+
+    <div class="preview-opt">
+      <label>
+        <input type="checkbox" id="onlyIssues" onchange="renderDeptPreview()">
+        취약·미점검 있는 부서만 생성 (이상없는 부서 제외)
+      </label>
+      <span id="deptFileCount" style="margin-left:auto;font-size:12px;color:var(--hd);font-weight:700"></span>
+    </div>
+
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;padding:0 2px">
+      각 파일 구성: 점검결과 · 요약 · 조치필요 · 취약항목분석 (IP 주소 미포함)
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:380px;overflow-y:auto">
+      <div style="background:var(--g);color:#fff;display:flex;padding:8px 14px;font-size:11px;font-weight:700">
+        <span style="flex:1">기관명</span>
+        <span class="dept-preview-stats" style="color:rgba(255,255,255,.8)">
+          <span style="min-width:40px;text-align:center">총원</span>
+          <span style="min-width:40px;text-align:center">안전</span>
+          <span style="min-width:40px;text-align:center">취약</span>
+          <span style="min-width:40px;text-align:center">미점검</span>
+        </span>
+        <span style="min-width:48px;text-align:right">상태</span>
+      </div>
+      <div id="deptPreviewList"></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+      <span style="font-size:11px;color:var(--muted)">
+        파일명 형식: <code style="background:var(--bg);padding:2px 6px;border-radius:4px;font-size:11px">26년 06월 PC점검결과_부서명.xlsx</code>
+      </span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-out btn-sm" onclick="closeDeptPreview()">취소</button>
+        <button class="btn btn-g" id="deptGenerateBtn" onclick="doExportDeptZip()">📦 ZIP 생성</button>
+      </div>
     </div>
   </div>
 </div>
