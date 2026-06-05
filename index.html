@@ -258,187 +258,667 @@ const _DEFAULT_GIST_ID = '';   // ← Gist ID를 여기에 넣으면 어느 PC�
 // 직원 명부 데이터 (PDF 등장 순서 기준, 공석 제외)
 // ============================================================
 const DEFAULT_DIR_RAW = [
-  // 대표이사 / 윤리감사
-  {dept:'대표이사',name:'이강인',title:'대표이사'},
-  {dept:'윤리감사',name:'이정아',title:'직원'},
-  {dept:'윤리감사',name:'이은희',title:'직원'},
-  // 전략경영실
-  {dept:'전략경영실',name:'이은경',title:'실장'},
-  // 전략기획부
-  {dept:'전략기획부',name:'이승봉',title:'부장'},
-  {dept:'전략기획부',name:'이유경',title:'차장',ipHint:'192.168.137'},
-  {dept:'전략기획부',name:'김소연',title:'차장'},
-  {dept:'전략기획부',name:'서원하',title:'차장'},
-  {dept:'전략기획부',name:'김보라',title:'차장'},
-  {dept:'전략기획부',name:'홍미소',title:'차장'},
-  {dept:'전략기획부',name:'김지은',title:'대리'},
-  {dept:'전략기획부',name:'김상민',title:'직원'},
-  // 경영지원부
-  {dept:'경영지원부',name:'이예재',title:'부장'},
-  {dept:'경영지원부',name:'최현서',title:'차장'},
-  {dept:'경영지원부',name:'김지선',title:'대리'},
-  {dept:'경영지원부',name:'오유정',title:'대리'},
-  {dept:'경영지원부',name:'전예리',title:'대리'},
-  {dept:'경영지원부',name:'이하림',title:'대리'},
-  {dept:'경영지원부',name:'오태규',title:'직원'},
-  {dept:'경영지원부',name:'박하나',title:'직원'},
-  // 부천시여성회관
-  {dept:'부천시여성회관',name:'조도자',title:'관장'},
-  {dept:'부천시여성회관',name:'이승주',title:'부장'},
-  {dept:'부천시여성회관',name:'이지원',title:'차장'},
-  {dept:'부천시여성회관',name:'최인우',title:'대리'},
-  {dept:'부천시여성회관',name:'이지선',title:'주임'},
-  {dept:'부천시여성회관',name:'설한솔',title:'직원'},
-  {dept:'부천시여성회관',name:'심혜경',title:'직원'},
-  // 부천여성청소년센터
-  {dept:'부천여성청소년센터',name:'김수경',title:'센터장'},
-  {dept:'부천여성청소년센터',name:'이선미',title:'부장'},
-  {dept:'부천여성청소년센터',name:'신선미',title:'차장'},
-  {dept:'부천여성청소년센터',name:'김미연',title:'차장'},
-  {dept:'부천여성청소년센터',name:'하수정',title:'대리'},
-  {dept:'부천여성청소년센터',name:'김수빈',title:'직원'},
-  {dept:'부천여성청소년센터',name:'민혜진',title:'직원'},
-  {dept:'부천여성청소년센터',name:'양송이',title:'대리'},
-  // 청소년문화의집
-  {dept:'청소년문화의집',name:'장지숙',title:'차장'},
-  {dept:'청소년문화의집',name:'이푸름',title:'대리'},
-  {dept:'청소년문화의집',name:'박근영',title:'직원'},
-  // 방과후아카데미 (여청)
-  {dept:'방과후아카데미(여청)',name:'이정규',title:'주임'},
-  // 청소년카페무지개
-  {dept:'청소년카페무지개',name:'이숙진',title:'주임'},
-  {dept:'청소년카페무지개',name:'오종환',title:'주임'},
-  // 부천시청소년센터
-  {dept:'부천시청소년센터',name:'김홍준',title:'센터장'},
-  {dept:'부천시청소년센터',name:'김성애',title:'부장'},
-  {dept:'참여와락팀',name:'박성희',title:'차장',ipHint:'192.168.137'},
-  {dept:'참여와락팀',name:'신지영',title:'대리'},
-  {dept:'참여와락팀',name:'최민아',title:'직원'},
-  {dept:'문화와락팀',name:'민가원',title:'차장'},
-  {dept:'문화와락팀',name:'유수진',title:'대리'},
-  {dept:'문화와락팀',name:'최준',title:'직원'},
-  // 산울림청소년센터
-  {dept:'산울림청소년센터',name:'양승부',title:'센터장'},
-  {dept:'산울림청소년센터',name:'박성희',title:'부장',ipHint:'192.168.101'},
-  {dept:'청소년활동팀(산울림)',name:'기혜련',title:'차장'},
-  {dept:'청소년활동팀(산울림)',name:'김민선',title:'대리'},
-  {dept:'청소년활동팀(산울림)',name:'임수지',title:'대리'},
-  {dept:'청소년활동팀(산울림)',name:'윤진희',title:'직원'},
-  {dept:'청소년활동팀(산울림)',name:'박예진',title:'직원'},
-  {dept:'청소년활동팀(산울림)',name:'엄수연',title:'직원'},
-  {dept:'청소년활동팀(산울림)',name:'윤남영',title:'직원'},
-  {dept:'청소년지원팀(산울림)',name:'김은영',title:'차장'},
-  {dept:'청소년지원팀(산울림)',name:'송복석',title:'차장'},
-  {dept:'청소년지원팀(산울림)',name:'김준환',title:'차장'},
-  {dept:'청소년지원팀(산울림)',name:'유길호',title:'직원'},
-  {dept:'청소년지원팀(산울림)',name:'김순남',title:'주임'},
-  {dept:'방과후아카데미(산울림)',name:'라단비',title:'주임'},
-  {dept:'방과후아카데미(산울림)',name:'신정윤',title:'직원'},
-  // 소사청소년센터
-  {dept:'소사청소년센터',name:'김미희',title:'센터장'},
-  {dept:'소사청소년센터',name:'김낙현',title:'부장'},
-  {dept:'무한팀(소사)',name:'이미영',title:'차장'},
-  {dept:'무한팀(소사)',name:'정화령',title:'대리'},
-  {dept:'무한팀(소사)',name:'남호석',title:'직원'},
-  {dept:'무한팀(소사)',name:'나필주',title:'직원'},
-  {dept:'창의팀(소사)',name:'이재우',title:'차장'},
-  {dept:'창의팀(소사)',name:'김준호',title:'직원'},
-  {dept:'창의팀(소사)',name:'정지훈',title:'직원'},
-  {dept:'상상팀(소사)',name:'용보라',title:'대리'},
-  {dept:'상상팀(소사)',name:'태진호',title:'대리'},
-  {dept:'상상팀(소사)',name:'유선영',title:'직원'},
-  {dept:'비상팀(소사)',name:'이정희',title:'대리'},
-  {dept:'비상팀(소사)',name:'박희정',title:'직원'},
-  {dept:'방과후아카데미(소사)',name:'권태현',title:'직원'},
-  // ── 우측 열 ──
-  // 청소년상담복지센터
-  {dept:'청소년상담복지센터',name:'백진현',title:'센터장'},
-  {dept:'청소년상담복지센터',name:'양근원',title:'부장'},
-  {dept:'청소년상담복지센터[원미]',name:'김선경',title:'주임',ipHint:'192.168.200'},
-  {dept:'청소년상담복지센터[원미]',name:'신혜선',title:'직원',ipHint:'192.168.200'},
-  {dept:'청소년상담복지센터[원미]',name:'황지희',title:'주임',ipHint:'192.168.200'},
-  {dept:'청소년상담복지센터[원미]',name:'조희진',title:'직원'},
-  {dept:'청소년상담복지센터[원미]',name:'정문선',title:'직원'},
-  {dept:'청소년상담복지센터[원미]',name:'김은령',title:'주임',ipHint:'192.168.200'},
-  {dept:'청소년상담복지센터[원미]',name:'원명호',title:'직원',ipHint:'192.168.200'},
-  {dept:'청소년상담복지센터[원미]',name:'차문도',title:'주임'},
-  {dept:'청소년상담복지센터[원미]',name:'장은정',title:'직원'},
-  {dept:'청소년상담복지센터[원미]',name:'이다솜',title:'직원'},
-  // 오정·소사 센터장 겸직 (백진현 동일인 → sameAs 처리)
-  {dept:'청소년상담복지센터[오정]',name:'백진현',title:'센터장(겸)',sameAs:true},
-  // 오정센터 (센터장 백진현 겸직 - 동일인이므로 별도 행 미포함)
-  {dept:'청소년상담복지센터[오정]',name:'김현숙',title:'차장'},
-  {dept:'청소년상담복지센터[오정]',name:'이유경',title:'직원',ipHint:'192.168.0'},
-  {dept:'청소년상담복지센터[오정]',name:'이경영',title:'직원'},
-  {dept:'청소년상담복지센터[오정]',name:'이선희',title:'직원'},
-  {dept:'청소년상담복지센터[오정]',name:'이영운',title:'직원'},
-  {dept:'청소년상담복지센터[오정]',name:'김아름',title:'대리'},
-  // 소사센터
-  {dept:'청소년상담복지센터[소사]',name:'최진아',title:'차장'},
-  {dept:'청소년상담복지센터[소사]',name:'김현주',title:'주임'},
-  {dept:'청소년상담복지센터[소사]',name:'신수원',title:'직원'},
-  {dept:'청소년상담복지센터[소사]',name:'이지의',title:'직원'},
-  {dept:'청소년상담복지센터[소사]',name:'서승아',title:'주임'},
-  {dept:'청소년상담복지센터[소사]',name:'이아람',title:'대리'},
-  {dept:'청소년상담복지센터[소사]',name:'이호섭',title:'직원'},
-  {dept:'청소년상담복지센터[소사]',name:'전유정',title:'직원'},
-  {dept:'청소년상담복지센터[소사]',name:'백진현',title:'센터장(겸)',sameAs:true},
-  // 꿈드림[소사]
-  {dept:'꿈드림[소사]',name:'김애영',title:'주임',ipHint:'192.168.100'},
-  {dept:'꿈드림[소사]',name:'이세나',title:'주임',ipHint:'192.168.100'},
-  {dept:'꿈드림[소사]',name:'고가영',title:'직원',ipHint:'192.168.100'},
-  {dept:'꿈드림[소사]',name:'김미선',title:'직원',ipHint:'192.168.100'},
-  {dept:'꿈드림[소사]',name:'오회옥',title:'직원',ipHint:'192.168.100'},
-  {dept:'꿈드림[소사]',name:'신홍철',title:'직원',ipHint:'192.168.100'},
-  {dept:'꿈드림[소사]',name:'이지훈',title:'직원',ipHint:'192.168.100'},
-  {dept:'꿈드림[소사]',name:'박예지',title:'직원',ipHint:'192.168.100'},
-  {dept:'꿈드림[소사]',name:'이다은',title:'직원'},
-  {dept:'꿈드림[소사]',name:'최문정',title:'직원'},
-  {dept:'꿈드림[소사]',name:'장윤희',title:'직원'},
-  // 건강가정지원센터
-  {dept:'부천시건강가정지원센터',name:'김윤경',title:'센터장'},
-  {dept:'부천시건강가정지원센터',name:'정소라',title:'과장'},
-  {dept:'운영지원팀(건강가정)',name:'최원진',title:'직원'},
-  {dept:'운영지원팀(건강가정)',name:'서하린',title:'직원'},
-  {dept:'운영지원팀(건강가정)',name:'박보름',title:'직원'},
-  {dept:'가족사업팀',name:'신동은',title:'팀장'},
-  {dept:'가족사업팀',name:'정지수',title:'선임'},
-  {dept:'가족사업팀',name:'양서영',title:'선임'},
-  {dept:'가족사업팀',name:'김수연',title:'직원'},
-  {dept:'가족사업팀',name:'김나라',title:'직원'},
-  {dept:'가족사업팀',name:'권정은',title:'직원'},
-  {dept:'가족사업팀',name:'박지예',title:'직원'},
-  {dept:'가족사업팀',name:'박희진',title:'직원'},
-  {dept:'아이돌봄지원사업팀',name:'강예진',title:'팀장'},
-  {dept:'아이돌봄지원사업팀',name:'윤영득',title:'직원'},
-  {dept:'아이돌봄지원사업팀',name:'고연주',title:'직원'},
-  {dept:'아이돌봄지원사업팀',name:'이수영',title:'직원'},
-  {dept:'아이돌봄지원사업팀',name:'배고은',title:'직원'},
-  {dept:'아이돌봄지원사업팀',name:'피의정',title:'직원'},
-  {dept:'아이돌봄지원사업팀',name:'박누리',title:'직원'},
-  // 고리울청소년센터
-  {dept:'고리울청소년센터',name:'신용식',title:'센터장'},
-  {dept:'고리울청소년센터',name:'이서경',title:'부장'},
-  {dept:'운영지원팀(고리울)',name:'우윤지',title:'직원'},
-  {dept:'활동지원팀(고리울)',name:'정수연',title:'팀장'},
-  {dept:'활동지원팀(고리울)',name:'한우진',title:'직원'},
-  {dept:'활동지원팀(고리울)',name:'김효진',title:'직원'},
-  {dept:'활동지원팀(고리울)',name:'성재윤',title:'직원'},
-  {dept:'친화마을팀(고리울)',name:'전서희',title:'팀장'},
-  {dept:'친화마을팀(고리울)',name:'서병일',title:'직원'},
-  {dept:'친화마을팀(고리울)',name:'안지선',title:'직원'},
-  {dept:'친화마을팀(고리울)',name:'국재영',title:'직원'},
-  {dept:'방과후아카데미(고리울)',name:'신은실',title:'팀장'},
-  {dept:'방과후아카데미(고리울)',name:'양도현',title:'담임'},
-  {dept:'방과후아카데미(고리울)',name:'장보현',title:'담임'},
-  // 일·쉼지원센터
-  {dept:'부천시일·쉼지원센터',name:'김수정',title:'센터장'},
-  {dept:'부천시일·쉼지원센터',name:'김숙희',title:'총괄팀장'},
-  {dept:'부천시일·쉼지원센터',name:'김미선',title:'직원',ipHint:'192.168.150'},
-  {dept:'부천시일·쉼지원센터',name:'백승아',title:'직원',ipHint:'192.168.150'},
-  {dept:'부천시일·쉼지원센터',name:'윤준영',title:'직원',ipHint:'192.168.150'},
-  {dept:'부천시일·쉼지원센터',name:'오나영',title:'직원',ipHint:'192.168.150'},
-  {dept:'부천시일·쉼지원센터',name:'이유림',title:'직원',ipHint:'192.168.150'},
+  {
+    "dept": "대표이사",
+    "name": "이강인",
+    "title": "대표이사"
+  },
+  {
+    "dept": "윤리감사",
+    "name": "이정아",
+    "title": "직원"
+  },
+  {
+    "dept": "윤리감사",
+    "name": "이은희",
+    "title": "직원"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "이은경",
+    "title": "실장"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "이승봉",
+    "title": "부장"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "이유경",
+    "title": "차장",
+    "ipHint": "192.168.137"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "서원하",
+    "title": "차장"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "김보라",
+    "title": "차장"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "홍미소",
+    "title": "차장"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "김지은",
+    "title": "대리"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "이예재",
+    "title": "부장"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "최현서",
+    "title": "차장"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "오유정",
+    "title": "대리"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "전예리",
+    "title": "대리"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "이하림",
+    "title": "대리"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "오태규",
+    "title": "직원"
+  },
+  {
+    "dept": "전략경영실",
+    "name": "박하나",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시여성회관",
+    "name": "조도자",
+    "title": "관장"
+  },
+  {
+    "dept": "부천시여성회관",
+    "name": "이승주",
+    "title": "부장"
+  },
+  {
+    "dept": "부천시여성회관",
+    "name": "이지원",
+    "title": "차장"
+  },
+  {
+    "dept": "부천시여성회관",
+    "name": "최인우",
+    "title": "대리"
+  },
+  {
+    "dept": "부천시여성회관",
+    "name": "이지선",
+    "title": "주임"
+  },
+  {
+    "dept": "부천시여성회관",
+    "name": "설한솔",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시여성회관",
+    "name": "심혜경",
+    "title": "직원"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "김수경",
+    "title": "센터장"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "이선미",
+    "title": "부장"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "신선미",
+    "title": "차장"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "김미연",
+    "title": "차장"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "하수정",
+    "title": "대리"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "김수빈",
+    "title": "직원"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "장지숙",
+    "title": "차장"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "이푸름",
+    "title": "대리"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "박근영",
+    "title": "직원"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "이정규",
+    "title": "주임"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "김채림",
+    "title": "직원"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "이숙진",
+    "title": "주임"
+  },
+  {
+    "dept": "부천여성청소년센터",
+    "name": "오종환",
+    "title": "주임"
+  },
+  {
+    "dept": "부천시청소년센터",
+    "name": "김홍준",
+    "title": "센터장"
+  },
+  {
+    "dept": "부천시청소년센터",
+    "name": "김성애",
+    "title": "부장"
+  },
+  {
+    "dept": "부천시청소년센터",
+    "name": "박성희",
+    "title": "차장",
+    "ipHint": "192.168.137"
+  },
+  {
+    "dept": "부천시청소년센터",
+    "name": "신지영",
+    "title": "대리"
+  },
+  {
+    "dept": "부천시청소년센터",
+    "name": "최민아",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시청소년센터",
+    "name": "민가원",
+    "title": "차장"
+  },
+  {
+    "dept": "부천시청소년센터",
+    "name": "유수진",
+    "title": "대리"
+  },
+  {
+    "dept": "부천시청소년센터",
+    "name": "최준",
+    "title": "직원"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "양승부",
+    "title": "센터장"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "박성희",
+    "title": "부장",
+    "ipHint": "192.168.101"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "김민선",
+    "title": "대리"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "임수지",
+    "title": "대리"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "윤진희",
+    "title": "직원"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "박예진",
+    "title": "직원"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "엄수연",
+    "title": "직원"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "김은영",
+    "title": "차장"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "송복석",
+    "title": "차장"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "김준환",
+    "title": "차장"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "유길호",
+    "title": "직원"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "라단비",
+    "title": "주임"
+  },
+  {
+    "dept": "산울림청소년센터",
+    "name": "신정윤",
+    "title": "직원"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "김미희",
+    "title": "센터장"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "김낙현",
+    "title": "부장"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "이미영",
+    "title": "차장"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "정화령",
+    "title": "대리"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "남호석",
+    "title": "직원"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "나필주",
+    "title": "직원"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "이재우",
+    "title": "차장"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "김준호",
+    "title": "직원"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "정지훈",
+    "title": "직원"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "용보라",
+    "title": "대리"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "태진호",
+    "title": "대리"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "유선영",
+    "title": "직원"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "이정희",
+    "title": "대리"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "박희정",
+    "title": "직원"
+  },
+  {
+    "dept": "소사청소년센터",
+    "name": "권태현",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "백진현",
+    "title": "센터장"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "양근원",
+    "title": "부장"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "김선경",
+    "title": "주임",
+    "ipHint": "192.168.200"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "신혜선",
+    "title": "직원",
+    "ipHint": "192.168.200"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "황지희",
+    "title": "주임",
+    "ipHint": "192.168.200"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "조희진",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "정문선",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "김은령",
+    "title": "주임",
+    "ipHint": "192.168.200"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "원명호",
+    "title": "직원",
+    "ipHint": "192.168.200"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "김현숙",
+    "title": "차장"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "이유경",
+    "title": "직원",
+    "ipHint": "192.168.0"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "이경영",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "이선희",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "이영운",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "최진아",
+    "title": "차장"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "김현주",
+    "title": "주임"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "신수원",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "이지의",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "이아람",
+    "title": "대리"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "이호섭",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "전유정",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "김애영",
+    "title": "주임",
+    "ipHint": "192.168.100"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "이세나",
+    "title": "주임",
+    "ipHint": "192.168.100"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "고가영",
+    "title": "직원",
+    "ipHint": "192.168.100"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "김미선",
+    "title": "직원",
+    "ipHint": "192.168.100"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "오회옥",
+    "title": "직원",
+    "ipHint": "192.168.100"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "신홍철",
+    "title": "직원",
+    "ipHint": "192.168.100"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "이지훈",
+    "title": "직원",
+    "ipHint": "192.168.100"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "박예지",
+    "title": "직원",
+    "ipHint": "192.168.100"
+  },
+  {
+    "dept": "부천시청소년상담복지센터",
+    "name": "이다은",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "김윤경",
+    "title": "센터장"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "정소라",
+    "title": "과장"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "최원진",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "서하린",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "박보름",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "신동은",
+    "title": "팀장"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "정지수",
+    "title": "선임"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "양서영",
+    "title": "선임"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "김수연",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "김나라",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "권정은",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "박지예",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "박희진",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "강예진",
+    "title": "팀장"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "윤영득",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "고연주",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "이수영",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "배고은",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시건강가정지원센터",
+    "name": "피의정",
+    "title": "직원"
+  },
+  {
+    "dept": "부천시일·쉼지원센터",
+    "name": "김수정",
+    "title": "센터장"
+  },
+  {
+    "dept": "부천시일·쉼지원센터",
+    "name": "김숙희",
+    "title": "총괄팀장"
+  },
+  {
+    "dept": "부천시일·쉼지원센터",
+    "name": "김미선",
+    "title": "직원",
+    "ipHint": "192.168.150"
+  },
+  {
+    "dept": "부천시일·쉼지원센터",
+    "name": "백승아",
+    "title": "직원",
+    "ipHint": "192.168.150"
+  },
+  {
+    "dept": "부천시일·쉼지원센터",
+    "name": "윤준영",
+    "title": "직원",
+    "ipHint": "192.168.150"
+  },
+  {
+    "dept": "부천시일·쉼지원센터",
+    "name": "오나영",
+    "title": "직원",
+    "ipHint": "192.168.150"
+  }
 ];
 let DIR = DEFAULT_DIR_RAW.map((e,i)=>({...e,idx:i+1}));
 
@@ -725,16 +1205,412 @@ const IP_DEPT = [
 // 사전 매핑 규칙 관리 (localStorage 저장)
 // ============================================================
 const DEFAULT_RULES = [
-  {id:'def1',type:'name_ip',matchName:'BWYF-712',matchIP:'192.168.137',ipMode:'prefix',
-   targetType:'person',targetName:'서원하',note:'BWYF-712 노트북'},
-  {id:'def2',type:'ip',matchName:'',matchIP:'192.168.150.171',ipMode:'exact',
-   targetType:'person',targetName:'이유림',note:''},
-  {id:'def3',type:'name_ip',matchName:'노트북1',matchIP:'192.168.0.187',ipMode:'exact',
-   targetType:'public',customDept:'부천시건강가정지원센터',customLabel:'노트북1(공용)',note:''},
-  {id:'def4',type:'name',matchName:'대표이사',matchIP:'',ipMode:'exact',
-   targetType:'person',targetName:'이강인',note:''},
-  {id:'def5',type:'skip',matchName:'전예리',matchIP:'192.168.137.166',ipMode:'exact',
-   targetType:'skip',note:'전예리 중복 IP 통합'},
+  {
+    "id": "def1",
+    "type": "name_ip",
+    "matchName": "BWYF-712",
+    "matchIP": "192.168.137",
+    "ipMode": "prefix",
+    "targetType": "person",
+    "targetName": "서원하",
+    "note": "BWYF-712 노트북"
+  },
+  {
+    "id": "u1780298713394",
+    "type": "name_ip",
+    "matchName": "Dodang-cafe1",
+    "matchIP": "192.168.0.104",
+    "ipMode": "exact",
+    "targetType": "person",
+    "targetName": "오종환",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780298793970",
+    "type": "name_ip",
+    "matchName": "산울림업무용2",
+    "matchIP": "192.168.101.80",
+    "ipMode": "exact",
+    "targetType": "public",
+    "targetName": "오종환",
+    "customDept": "산울림청소년센터",
+    "customLabel": "산울림업무용2",
+    "note": ""
+  },
+  {
+    "id": "u1780298839930",
+    "type": "name_ip",
+    "matchName": "서포터즈",
+    "matchIP": "192.168.100.195",
+    "ipMode": "exact",
+    "targetType": "public",
+    "targetName": "오종환",
+    "customDept": "부천시청소년상담복지센터",
+    "customLabel": "서포터즈",
+    "note": ""
+  },
+  {
+    "id": "u1780298863562",
+    "type": "name_ip",
+    "matchName": "원미센터사례연구실",
+    "matchIP": "192.168.200.19",
+    "ipMode": "exact",
+    "targetType": "public",
+    "targetName": "오종환",
+    "customDept": "부천시청소년상담복지센터",
+    "customLabel": "원미센터사례연구실",
+    "note": ""
+  },
+  {
+    "id": "u1780298883330",
+    "type": "name_ip",
+    "matchName": "따르릉북카페",
+    "matchIP": "10.180.39.217",
+    "ipMode": "exact",
+    "targetType": "person",
+    "targetName": "남호석",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780298899770",
+    "type": "name_ip",
+    "matchName": "상상아울LAB",
+    "matchIP": "10.180.39.203",
+    "ipMode": "exact",
+    "targetType": "public",
+    "targetName": "남호석",
+    "customDept": "소사청소년센터",
+    "customLabel": "상상아울LAB",
+    "note": ""
+  },
+  {
+    "id": "u1780298918578",
+    "type": "name_ip",
+    "matchName": "tao",
+    "matchIP": "192.168.137.125",
+    "ipMode": "exact",
+    "targetType": "person",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780298985322",
+    "type": "skip",
+    "matchName": "신홍철",
+    "matchIP": "192.168.100.168",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299028290",
+    "type": "skip",
+    "matchName": "DESKTOP-9DLCN17",
+    "matchIP": "192.168.101.28",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299033353",
+    "type": "skip",
+    "matchName": "LAPTOP-T7G9U4VA",
+    "matchIP": "192.168.0.21",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299038210",
+    "type": "skip",
+    "matchName": "건강가정",
+    "matchIP": "192.168.0.207",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299101802",
+    "type": "skip",
+    "matchName": "김나님",
+    "matchIP": "10.180.39.218",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299142185",
+    "type": "skip",
+    "matchName": "김나라",
+    "matchIP": "192.168.1.5",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299152042",
+    "type": "skip",
+    "matchName": "김상민",
+    "matchIP": "192.168.137.149",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299157154",
+    "type": "skip",
+    "matchName": "노트북1",
+    "matchIP": "192.168.0.187",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299162010",
+    "type": "skip",
+    "matchName": "대표이사",
+    "matchIP": "192.168.137.2",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299178146",
+    "type": "skip",
+    "matchName": "부천시청소년상담복지센터",
+    "matchIP": "192.168.1.2",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299183626",
+    "type": "skip",
+    "matchName": "부천시청소년센터",
+    "matchIP": "192.168.137.45",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299189490",
+    "type": "skip",
+    "matchName": "소사청공유",
+    "matchIP": "10.180.39.216",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299194316",
+    "type": "skip",
+    "matchName": "신홍철",
+    "matchIP": "192.168.100.168",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299199609",
+    "type": "skip",
+    "matchName": "옥길육아나눔터2",
+    "matchIP": "192.168.0.5",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299204106",
+    "type": "skip",
+    "matchName": "육아나눔터",
+    "matchIP": "192.168.0.203",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299209235",
+    "type": "skip",
+    "matchName": "이유림",
+    "matchIP": "192.168.150.171",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299214330",
+    "type": "skip",
+    "matchName": "일쉼이음공간접수대",
+    "matchIP": "192.168.0.35",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299219043",
+    "type": "skip",
+    "matchName": "일쉼치유공간접수대",
+    "matchIP": "192.168.150.22",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299223586",
+    "type": "skip",
+    "matchName": "일쉼회복공간접수대",
+    "matchIP": "192.168.150.19",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299229459",
+    "type": "skip",
+    "matchName": "장은정",
+    "matchIP": "192.168.200.11",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299234995",
+    "type": "skip",
+    "matchName": "전예리",
+    "matchIP": "192.168.137.166",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299239725",
+    "type": "skip",
+    "matchName": "주말형",
+    "matchIP": "10.180.39.205",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299244354",
+    "type": "skip",
+    "matchName": "차문도",
+    "matchIP": "192.168.200.10",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299249497",
+    "type": "skip",
+    "matchName": "최원진",
+    "matchIP": "192.168.0.39",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299254177",
+    "type": "skip",
+    "matchName": "황서현",
+    "matchIP": "192.168.0.198",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "조도자",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  },
+  {
+    "id": "u1780299902953",
+    "type": "skip",
+    "matchName": "이의민",
+    "matchIP": "192.168.100.116",
+    "ipMode": "exact",
+    "targetType": "skip",
+    "targetName": "",
+    "customDept": "",
+    "customLabel": "",
+    "note": ""
+  }
 ];
 
 function loadRules(){
