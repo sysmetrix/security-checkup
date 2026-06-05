@@ -341,7 +341,40 @@ body.dark input,body.dark select{background:var(--card);color:var(--text);border
 body.dark .unk-item{background:#1A2535;border-color:#4B5563}
 body.dark .preview-opt{background:#1A2535}
 body.dark .cl-pane,body.dark .cl-version{color:var(--text)}
-body.dark .resultBanner{background:linear-gradient(135deg,#1E4E7A 0%,#153A5C 100%)}
+body.dark #resultBanner{background:linear-gradient(135deg,#1E4E7A 0%,#153A5C 100%)!important}
+
+/* 다크모드 테이블 행 색상 */
+body.dark .dept-tbl tbody tr.all-safe{background:#1B3A2B!important}
+body.dark .dept-tbl tbody tr.all-safe td{color:var(--text)}
+body.dark .dept-tbl tbody tr.has-vuln{background:#3A2A14!important}
+body.dark .dept-tbl tbody tr.has-vuln td{color:var(--text)}
+body.dark .dept-tbl tfoot tr,
+body.dark #deptBody tr[style*="background:#F0F4F2"]{
+  background:#1A2535!important;color:var(--text)
+}
+
+/* 합계 행 */
+.dept-total-row{font-weight:700;border-top:2px solid var(--border);background:#F0F4F2}
+body.dark .dept-total-row{background:#1A2535!important}
+.dept-total-row td{color:var(--text)!important}
+
+/* 다크모드 상세 테이블 행 */
+body.dark .data-tbl tbody tr:hover td{background:rgba(255,255,255,.05)}
+body.dark .data-tbl tbody tr.row-vuln td{background:#2D1F0E!important}
+body.dark .data-tbl tbody tr.row-safe td{background:#0E2D1A!important}
+body.dark .data-tbl tbody tr.row-unc td{background:#1A1F2D!important}
+
+/* 다크모드 결과 배너 */
+body.dark #resultBanner,
+body.dark #resultBanner *{color:#fff!important}
+body.dark #resultBanner [style*="color:#6EE7B7"]{color:#6EE7B7!important}
+body.dark #resultBanner [style*="color:#FCD34D"]{color:#FCD34D!important}
+body.dark #resultBanner [style*="color:#D1D5DB"]{color:#D1D5DB!important}
+
+/* 다크모드 취약항목 분석 */
+body.dark .vuln-bar-wrap{background:#2D3748}
+body.dark .vuln-label{color:var(--text)!important}
+body.dark .vuln-count{color:#FBBF24!important}
 </style>
 </head>
 <body>
@@ -355,7 +388,7 @@ body.dark .resultBanner{background:linear-gradient(135deg,#1E4E7A 0%,#153A5C 100
     <button class="hd-btn" onclick="openSettings()">⚙️ 설정</button>
     <button class="hd-btn" id="darkBtn" onclick="toggleDark()">🌙 다크모드</button>
     <button class="hd-btn" onclick="openChangelog()">v4.1 📋</button>
-    <a class="hd-btn" id="githubBtn" href="https://github.com/sysmetrix/security-checkup" target="_blank" rel="noopener" title="GitHub 저장소로 이동">↗ GitHub</a>
+    <a class="hd-btn" id="githubBtn" href="YOUR_GITHUB_URL" target="_blank" rel="noopener" title="GitHub 저장소로 이동">↗ GitHub</a>
   </div>
 </header>
 
@@ -1006,7 +1039,7 @@ const DEFAULT_RULES = [
     "ipMode": "prefix",
     "targetType": "person",
     "targetName": "서원하",
-    "note": ""
+    "note": "BWYF-712 노트북"
   },
   {
     "id": "u1780298713394",
@@ -2301,7 +2334,7 @@ function renderDeptTable(){
   const tvp=totals.total?Math.round(totals.vuln/totals.total*100):0;
   const tup=100-tsp-tvp;
   const tfooter=document.createElement('tr');
-  tfooter.style.cssText='background:#F0F4F2;font-weight:700;border-top:2px solid var(--border)';
+  tfooter.className='dept-total-row';
   tfooter.innerHTML=`
     <td>합계</td>
     <td style="text-align:center">${totals.total}</td>
@@ -3019,7 +3052,7 @@ function initDark(){
       <div class="cl-tech-item">
         <div class="cl-tech-ver">v4.1 — 직원 명부 갱신</div>
         <ul class="cl-tech-list">
-          <li>DEFAULT_DIR_RAW 128명으로 교체 (이*림·윤*영 등 퇴직자 제거)</li>
+          <li>DEFAULT_DIR_RAW 128명으로 교체 (이유림·윤남영 등 퇴직자 제거)</li>
           <li>부서 통합: 전략기획부+경영지원부 → 전략경영실, 각 청소년센터 팀별 → 센터 단위</li>
         </ul>
       </div>
