@@ -240,8 +240,6 @@ body.has-sticky{padding-bottom:72px}
 .save-dropdown-item .item-icon{font-size:16px;width:20px;text-align:center}
 /* 인쇄 */
 @media print {
-  header,#stickyBar,.steps,.tab-bar,.settings-btn,
-  #pane-detail,.modal-overlay,#resultBanner{display:none!important}
   body{background:#fff!important;padding:0!important}
   .main{padding:16px!important;max-width:100%!important}
   #step1,#step2{display:none!important}
@@ -319,62 +317,131 @@ body.has-sticky{padding-bottom:72px}
 .hd-btn.active-dark{background:rgba(255,255,200,.25)}
 .hd-btns{display:flex;gap:6px;align-items:center;margin-left:auto;flex-shrink:0}
 
-/* 다크모드 */
-body.dark{
-  --bg:#111827;--card:#1F2937;--border:#374151;
-  --text:#F9FAFB;--muted:#9CA3AF;
-}
+
+
+/* 합계 행 */
+.dept-total-row{font-weight:700;border-top:2px solid var(--border);background:#F0F4F2}
+.dept-total-row td{color:var(--text)!important}
+
+/* ============================================================
+   다크모드 통합 CSS (v4.2 전체 점검)
+   ============================================================ */
+body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9CA3AF}
+
+/* 레이아웃 */
 body.dark .card{box-shadow:0 1px 6px rgba(0,0,0,.4)}
-body.dark .upload-zone{background:#1A2535}
-body.dark thead{background:var(--g)}
 body.dark .sticky-bar{background:var(--card);border-top-color:var(--border)}
 body.dark .steps{background:var(--card)}
 body.dark .tab-bar{background:var(--card)}
 body.dark .tab-btn:not(.active){color:var(--muted)}
+body.dark .modal-overlay{background:rgba(0,0,0,.6)}
 body.dark .modal-box{background:var(--card)}
 body.dark .save-dropdown-menu{background:var(--card)}
-body.dark .dept-tbl td{border-bottom-color:var(--border)}
-body.dark .dept-tbl tr:hover td{background:rgba(255,255,255,.04)}
-body.dark .dept-preview-row:hover{background:rgba(255,255,255,.04)}
-body.dark .dash-stat{background:var(--card)}
-body.dark input,body.dark select{background:var(--card);color:var(--text);border-color:var(--border)}
-body.dark .unk-item{background:#1A2535;border-color:#4B5563}
-body.dark .preview-opt{background:#1A2535}
-body.dark .cl-pane,body.dark .cl-version{color:var(--text)}
-body.dark #resultBanner{background:linear-gradient(135deg,#1E4E7A 0%,#153A5C 100%)!important}
+body.dark .logo{background:rgba(255,255,255,.1)}
 
-/* 다크모드 테이블 행 색상 */
-body.dark .dept-tbl tbody tr.all-safe{background:#1B3A2B!important}
-body.dark .dept-tbl tbody tr.all-safe td{color:var(--text)}
-body.dark .dept-tbl tbody tr.has-vuln{background:#3A2A14!important}
-body.dark .dept-tbl tbody tr.has-vuln td{color:var(--text)}
-body.dark .dept-tbl tfoot tr,
-body.dark #deptBody tr[style*="background:#F0F4F2"]{
-  background:#1A2535!important;color:var(--text)
-}
+/* 스텝 인디케이터 */
+body.dark .step.done{background:#1B3A2B;color:#6EE7B7}
 
-/* 합계 행 */
-.dept-total-row{font-weight:700;border-top:2px solid var(--border);background:#F0F4F2}
+/* 업로드 존 */
+body.dark .upload-zone{background:#1A2535;border-color:var(--g)}
+body.dark .upload-zone:hover,body.dark .upload-zone.over{background:#1B3A2B;border-color:var(--hd)}
+body.dark .upload-zone.loaded{background:#1B3A2B;border-color:var(--g)}
+
+/* ── 2단계 상세 테이블 행 (핵심 수정) ── */
+body.dark tr.safe-row td{background:#0F2D1A!important;color:var(--text)!important}
+body.dark tr.safe-row:hover td{background:#1B3A2B!important}
+body.dark tr.warn-row td{background:#2D1F08!important;color:var(--text)!important}
+body.dark tr.warn-row:hover td{background:#3A2A10!important}
+body.dark tr.danger-row td{background:#2D1010!important;color:var(--text)!important}
+body.dark tr.danger-row:hover td{background:#3A1515!important}
+body.dark tr.unchecked-row td{background:#1A2535!important;color:var(--text)!important}
+body.dark tr.unchecked-row:hover td{background:#1F2D40!important}
+
+/* 점수 배지 */
+body.dark .b-safe{background:#064E3B;color:#6EE7B7}
+body.dark .b-warn{background:#78350F;color:#FCD34D}
+body.dark .b-danger{background:#7F1D1D;color:#FCA5A5}
+body.dark .b-unc{background:#1F2937;color:#9CA3AF}
+body.dark .b-pur{background:#2E1065;color:#C4B5FD}
+
+/* 알림 박스 */
+body.dark .a-info{background:#1A2D4A;border-color:#1E40AF;color:#93C5FD}
+body.dark .a-ok{background:#0F2D1A;border-color:#065F46;color:#6EE7B7}
+body.dark .a-warn{background:#2D1F08;border-color:#92400E;color:#FCD34D}
+
+/* 미확인 기기 박스 */
+body.dark .unk-item{background:#1F2410;border-color:#78350F}
+
+/* 규칙 테이블 */
+body.dark .rule-tbl tr:hover td{background:#1B3A2B}
+body.dark .rule-tbl td{color:var(--text)}
+
+/* 태그 칩 */
+body.dark .tag-name{background:#1A2D4A;color:#93C5FD}
+body.dark .tag-ip{background:#064E3B;color:#6EE7B7}
+body.dark .tag-both{background:#2E1065;color:#C4B5FD}
+body.dark .tag-skip{background:#7F1D1D;color:#FCA5A5}
+
+/* 규칙 추가 폼 */
+body.dark .add-form{background:#1A2535;border-color:var(--border)}
+
+/* 부서별 테이블 */
+body.dark .dept-tbl tr:hover td{background:#1B3A2B}
+body.dark .dept-tbl tbody tr.all-safe{background:#0F2D1A!important}
+body.dark .dept-tbl tbody tr.all-safe td{color:var(--text)!important}
+body.dark .dept-tbl tbody tr.has-vuln{background:#2D1F08!important}
+body.dark .dept-tbl tbody tr.has-vuln td{color:var(--text)!important}
 body.dark .dept-total-row{background:#1A2535!important}
-.dept-total-row td{color:var(--text)!important}
+body.dark .dept-total-row td{color:var(--text)!important}
+body.dark #deptBody tr[style*="background:#F0F4F2"]{background:#1A2535!important;color:var(--text)!important}
 
-/* 다크모드 상세 테이블 행 */
-body.dark .data-tbl tbody tr:hover td{background:rgba(255,255,255,.05)}
-body.dark .data-tbl tbody tr.row-vuln td{background:#2D1F0E!important}
-body.dark .data-tbl tbody tr.row-safe td{background:#0E2D1A!important}
-body.dark .data-tbl tbody tr.row-unc td{background:#1A1F2D!important}
+/* 취약항목 분석 */
+body.dark .vuln-bar-wrap{background:#374151}
+body.dark .vuln-label{color:var(--text)!important}
+body.dark .vuln-count{color:#FBBF24!important}
 
-/* 다크모드 결과 배너 */
-body.dark #resultBanner,
-body.dark #resultBanner *{color:#fff!important}
+/* 대시보드 바 */
+body.dark .dept-bar-unc{background:#4B5563}
+body.dark .dash-stat{background:var(--card);border-color:var(--border)}
+
+/* 결과 배너 */
+body.dark #resultBanner{background:linear-gradient(135deg,#1E4E7A 0%,#153A5C 100%)!important}
+body.dark #resultBanner,body.dark #resultBanner *{color:#fff!important}
 body.dark #resultBanner [style*="color:#6EE7B7"]{color:#6EE7B7!important}
 body.dark #resultBanner [style*="color:#FCD34D"]{color:#FCD34D!important}
 body.dark #resultBanner [style*="color:#D1D5DB"]{color:#D1D5DB!important}
 
-/* 다크모드 취약항목 분석 */
-body.dark .vuln-bar-wrap{background:#2D3748}
-body.dark .vuln-label{color:var(--text)!important}
-body.dark .vuln-count{color:#FBBF24!important}
+/* 프리뷰 배지 */
+body.dark .badge-ok{background:#064E3B;color:#6EE7B7}
+body.dark .badge-warn{background:#78350F;color:#FCD34D}
+body.dark .badge-issue{background:#7F1D1D;color:#FCA5A5}
+body.dark .dept-preview-row:hover{background:rgba(255,255,255,.04)}
+body.dark .preview-opt{background:#1A2535}
+
+/* 체인지로그 */
+body.dark .cl-tag.new{background:#064E3B;color:#6EE7B7}
+body.dark .cl-tag.fix{background:#7F1D1D;color:#FCA5A5}
+body.dark .cl-tag.improve{background:#1E3A5F;color:#93C5FD}
+body.dark .cl-pane,body.dark .cl-version{color:var(--text)}
+body.dark .cl-summary{color:var(--muted)}
+
+/* 입력 요소 */
+body.dark input,body.dark select,body.dark textarea{
+  background:var(--card);color:var(--text);border-color:var(--border)}
+body.dark select option{background:var(--card);color:var(--text)}
+
+/* 스크롤바 */
+body.dark ::-webkit-scrollbar{width:8px;height:8px}
+body.dark ::-webkit-scrollbar-track{background:#1F2937}
+body.dark ::-webkit-scrollbar-thumb{background:#4B5563;border-radius:4px}
+body.dark ::-webkit-scrollbar-thumb:hover{background:#6B7280}
+
+/* 인쇄 */
+@media print{
+  header,#stickyBar,.steps,.tab-bar,.settings-btn,
+  #pane-detail,.modal-overlay,#resultBanner{display:none!important}
+  body{background:#fff!important;padding:0!important}
+  .main{padding:16px!important;max-width:100%!important}
 </style>
 </head>
 <body>
@@ -387,7 +454,7 @@ body.dark .vuln-count{color:#FBBF24!important}
     <button class="hd-btn" onclick="openHelp()">? 도움말</button>
     <button class="hd-btn" onclick="openSettings()">⚙️ 설정</button>
     <button class="hd-btn" id="darkBtn" onclick="toggleDark()">🌙 다크모드</button>
-    <button class="hd-btn" onclick="openChangelog()">v4.1 📋</button>
+    <button class="hd-btn" onclick="openChangelog()">v4.2 📋</button>
     <a class="hd-btn" id="githubBtn" href="YOUR_GITHUB_URL" target="_blank" rel="noopener" title="GitHub 저장소로 이동">↗ GitHub</a>
   </div>
 </header>
@@ -776,8 +843,8 @@ function resetDir(){
 // GitHub Gist 연동
 // ============================================================
 const GIST_FILE='bwyf_security_config.json';
-function getGistCfg(){return{pat:localStorage.getItem('bwyf_gist_pat')||_DEFAULT_PAT,gistId:localStorage.getItem('bwyf_gist_id')||_DEFAULT_GIST_ID};}
-function saveGistCfg(pat,gistId){localStorage.setItem('bwyf_gist_pat',pat);localStorage.setItem('bwyf_gist_id',gistId);}
+function getGistCfg(){return{pat:sessionStorage.getItem('bwyf_gist_pat')||_DEFAULT_PAT,gistId:localStorage.getItem('bwyf_gist_id')||_DEFAULT_GIST_ID};}
+function saveGistCfg(pat,gistId){sessionStorage.setItem('bwyf_gist_pat',pat);localStorage.setItem('bwyf_gist_id',gistId);}
 
 function setGistStatus(type,msg){
   const el=document.getElementById('gistStatus');if(!el)return;
@@ -2920,6 +2987,21 @@ function initDark(){
 
       <div class="cl-version">
         <div class="cl-ver-hd">
+          <span class="cl-badge major">v4.2</span>
+          <span class="cl-title">보안 강화 및 다크모드 전체 개선</span>
+          <span class="cl-date">2026-06</span>
+        </div>
+        <p class="cl-summary">GitHub Gist 인증 토큰(PAT)을 브라우저 세션 저장소로 변경해 브라우저 종료 시 자동 소멸됩니다. 다크모드 전체 점검으로 2단계 테이블 행·점수 배지·알림 박스·태그 칩·부서 테이블 등 20개 이상 항목의 텍스트 가시성을 개선했습니다.</p>
+        <div class="cl-tags">
+          <span class="cl-tag fix">PAT sessionStorage 전환</span>
+          <span class="cl-tag fix">다크모드 전체 점검</span>
+          <span class="cl-tag improve">2단계 테이블 가시성</span>
+          <span class="cl-tag improve">배지·태그 색상 통일</span>
+        </div>
+      </div>
+
+      <div class="cl-version">
+        <div class="cl-ver-hd">
           <span class="cl-badge major">v4.1</span>
           <span class="cl-title">직원 명부 최신화</span>
           <span class="cl-date">2026-06</span>
@@ -3049,6 +3131,14 @@ function initDark(){
 
     <!-- 탭 2: 기술 상세 -->
     <div class="cl-pane" id="clPane2" style="overflow-y:auto;max-height:calc(82vh - 130px)">
+      <div class="cl-tech-item">
+        <div class="cl-tech-ver">v4.2 — 보안·다크모드</div>
+        <ul class="cl-tech-list">
+          <li>PAT: localStorage → sessionStorage (getGistCfg / saveGistCfg)</li>
+          <li>다크모드 CSS 분산 규칙 → 통합 블록으로 재작성</li>
+          <li>신규 적용: tr.safe/warn/danger/unchecked-row, .b-safe/warn/danger/unc, .a-info/ok/warn, .tag-name/ip/both/skip, .unk-item, .add-form, scrollbar</li>
+        </ul>
+      </div>
       <div class="cl-tech-item">
         <div class="cl-tech-ver">v4.1 — 직원 명부 갱신</div>
         <ul class="cl-tech-list">

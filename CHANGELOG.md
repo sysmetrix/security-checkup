@@ -4,6 +4,18 @@
 
 ---
 
+## v4.2 — 보안 개선 `2026-06`
+
+### 변경 내용
+- GitHub Gist 인증 토큰(PAT) 저장 위치를 `localStorage` → `sessionStorage`로 변경
+- 브라우저 종료 시 토큰 자동 소멸 (공용 PC 환경 보안 향상)
+
+### 기술
+- `getGistCfg()` / `saveGistCfg()`: PAT 참조 저장소 변경
+- Gist ID는 `localStorage` 유지 (민감 정보 아님)
+
+---
+
 ## v4.1 — 직원 명부 최신화 `2026-06`
 
 ### 변경 내용
@@ -185,4 +197,4 @@
 
 ---
 
-*개발: 부천여성청소년재단 전략경영실*
+*개발: Claude (Anthropic) + 부천여성청소년재단 전략경영실*
