@@ -34,6 +34,10 @@
    * html2canvas 및 jsPDF: 대시보드 화면 캡처 및 PDF 문서 생성
 
 
+**접속 방법**
+- 웹: https://sysmetrix.github.io/security-checkup (별도 설치 불필요)
+- 로컬: index.html 다운로드 후 브라우저에서 실행
+
 
 ## 사용 방법
 
