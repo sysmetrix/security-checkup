@@ -21,7 +21,7 @@
     <button class="hd-btn" onclick="openHelp()">? 도움말</button>
     <button class="hd-btn" onclick="openSettings()">⚙️ 설정</button>
     <button class="hd-btn" id="darkBtn" onclick="toggleDark()">🌙 다크모드</button>
-    <button class="hd-btn" onclick="openChangelog()">v4.2 📋</button>
+    <button class="hd-btn" onclick="openChangelog()">v4.5 📋</button>
     <a class="hd-btn" id="githubBtn" href="YOUR_GITHUB_URL" target="_blank" rel="noopener" title="GitHub 저장소로 이동">↗ GitHub</a>
   </div>
 </header>
@@ -362,6 +362,7 @@
         <span style="font-size:12px;color:var(--muted)">월</span>
       </div>
       <button class="btn btn-gold" id="stickyExportBtn" onclick="exportXlsx()">📊 총괄 보고서</button>
+      <button class="btn btn-out" id="overallHwpxBtn" onclick="exportOverallHwpx()">📄 총괄 HWPX</button>
       <button class="btn btn-g" onclick="showDeptPreview()">📦 부서별 보고서</button>
       <!-- 대시보드 저장 드롭다운 -->
       <div class="save-dropdown" id="saveDrop">
@@ -423,7 +424,8 @@
       </span>
       <div style="display:flex;gap:8px">
         <button class="btn btn-out btn-sm" onclick="closeDeptPreview()">취소</button>
-        <button class="btn btn-g" id="deptGenerateBtn" onclick="doExportDeptZip()">📦 ZIP 생성</button>
+        <button class="btn btn-out btn-sm" id="deptHwpxBtn" onclick="doExportDeptHwpxZip()">📄 HWPX ZIP</button>
+        <button class="btn btn-g" id="deptGenerateBtn" onclick="doExportDeptZip()">📦 Excel ZIP</button>
       </div>
     </div>
   </div>
@@ -446,6 +448,48 @@
 
     <!-- 탭 1: 변경 이력 (일반) -->
     <div class="cl-pane active" id="clPane1" style="overflow-y:auto;max-height:calc(82vh - 130px)">
+
+      <div class="cl-version">
+        <div class="cl-ver-hd">
+          <span class="cl-badge major">v4.5</span>
+          <span class="cl-title">HWPX 표 서식 개선</span>
+          <span class="cl-date">2026-06</span>
+        </div>
+        <p class="cl-summary">HWPX 보고서의 표 영역을 일반 텍스트가 아닌 실제 HWPX 표 객체로 생성하도록 개선했습니다. 요약, 부서별 현황, 조치 필요 대상, 취약 항목 분석, 점검 결과에 표 테두리와 헤더 배경 서식이 적용됩니다.</p>
+        <div class="cl-tags">
+          <span class="cl-tag fix">표 깨짐 개선</span>
+          <span class="cl-tag improve">HWPX 표 객체 생성</span>
+          <span class="cl-tag improve">셀 테두리/헤더 서식</span>
+        </div>
+      </div>
+
+      <div class="cl-version">
+        <div class="cl-ver-hd">
+          <span class="cl-badge major">v4.4</span>
+          <span class="cl-title">HWPX 호환성 수정</span>
+          <span class="cl-date">2026-06</span>
+        </div>
+        <p class="cl-summary">한컴에서 HWPX 파일 오류가 발생하던 문제를 수정했습니다. GitHub의 HWPX 생성 샘플 구조를 참고해 manifest, content.hpf, header.xml, section0.xml의 네임스페이스와 기본 문서 구조를 보정했습니다.</p>
+        <div class="cl-tags">
+          <span class="cl-tag fix">HWPX 열기 오류 수정</span>
+          <span class="cl-tag fix">OWPML 구조 보정</span>
+          <span class="cl-tag improve">기본 문단 서식 추가</span>
+        </div>
+      </div>
+
+      <div class="cl-version">
+        <div class="cl-ver-hd">
+          <span class="cl-badge major">v4.3</span>
+          <span class="cl-title">HWPX 보고서 추출</span>
+          <span class="cl-date">2026-06</span>
+        </div>
+        <p class="cl-summary">총괄 HWPX 단일 파일과 부서별 HWPX ZIP 다운로드 기능을 추가했습니다. 기존 Excel 보고서는 그대로 유지되며, 부서별 HWPX는 배포용 원칙에 맞춰 IP 주소를 포함하지 않습니다.</p>
+        <div class="cl-tags">
+          <span class="cl-tag new">총괄 HWPX</span>
+          <span class="cl-tag new">부서별 HWPX ZIP</span>
+          <span class="cl-tag improve">리포트 모델 분리</span>
+        </div>
+      </div>
 
       <div class="cl-version">
         <div class="cl-ver-hd">
@@ -593,6 +637,35 @@
 
     <!-- 탭 2: 기술 상세 -->
     <div class="cl-pane" id="clPane2" style="overflow-y:auto;max-height:calc(82vh - 130px)">
+      <div class="cl-tech-item">
+        <div class="cl-tech-ver">v4.5 — HWPX 표 서식</div>
+        <ul class="cl-tech-list">
+          <li>HWPX 본문 표를 hp:tbl / hp:tr / hp:tc 구조로 생성</li>
+          <li>셀 주소, 셀 크기, 셀 여백, 반복 헤더 속성 적용</li>
+          <li>Contents/header.xml에 표 테두리와 헤더 배경 borderFill 스타일 추가</li>
+          <li>긴 상세 목록은 HWPX에는 일부 수록하고 Excel 상세 보고서 확인 안내 표시</li>
+        </ul>
+      </div>
+      <div class="cl-tech-item">
+        <div class="cl-tech-ver">v4.4 — HWPX 호환성</div>
+        <ul class="cl-tech-list">
+          <li>version.xml: hv:HWPVersion 구조 적용</li>
+          <li>META-INF/manifest.xml: ODF manifest 네임스페이스와 file-entry 적용</li>
+          <li>Contents/content.hpf: hc:package/head/body/section 구조 적용</li>
+          <li>Contents/header.xml: fontfaces, charProperties, paraProperties, styles 명시</li>
+          <li>Contents/section0.xml: hs:sec 루트와 hp:secPr 페이지 설정 추가</li>
+        </ul>
+      </div>
+      <div class="cl-tech-item">
+        <div class="cl-tech-ver">v4.3 — HWPX 보고서</div>
+        <ul class="cl-tech-list">
+          <li>buildOverallReportModel() / buildDeptReportModel(): 총괄·부서별 리포트 모델 생성</li>
+          <li>createHwpxBlob(): JSZip 기반 HWPX 패키지 생성</li>
+          <li>exportOverallHwpx(): 종합 HWPX 단일 파일 다운로드</li>
+          <li>doExportDeptHwpxZip(): 부서별 HWPX 파일 ZIP 다운로드</li>
+          <li>부서별 HWPX는 기존 부서별 Excel과 동일하게 IP 주소 제외</li>
+        </ul>
+      </div>
       <div class="cl-tech-item">
         <div class="cl-tech-ver">v4.2 — 보안·다크모드</div>
         <ul class="cl-tech-list">

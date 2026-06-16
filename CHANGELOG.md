@@ -4,6 +4,52 @@
 
 ---
 
+## v4.5 — HWPX 표 서식 개선 `2026-06`
+
+### 변경 내용
+- HWPX 보고서의 파이프 문자 기반 표를 실제 HWPX 표 객체로 변경
+- 총괄/부서별 보고서의 요약, 부서별 현황, 조치 필요 대상, 취약 항목 분석, 점검 결과 표 서식 개선
+- 표 헤더 배경색과 셀 테두리 스타일 추가
+
+### 기술
+- `hp:tbl`, `hp:tr`, `hp:tc`, `hp:subList` 기반 표 XML 생성
+- `Contents/header.xml`에 표용 `borderFill` 스타일 추가
+- GitHub `python-hwpx` 표 샘플 구조를 참고해 셀 주소, 셀 크기, 셀 여백, 반복 헤더 속성 적용
+
+---
+
+## v4.4 — HWPX 호환성 수정 `2026-06`
+
+### 변경 내용
+- 한컴에서 HWPX 파일 오류가 발생하던 문제 수정
+- HWPX 내부 XML 패키지 구조를 GitHub HWPX 생성 샘플 구조에 맞춰 보정
+- `version.xml`, `META-INF/manifest.xml`, `Contents/content.hpf`, `Contents/header.xml`, `Contents/section0.xml` 생성 방식 개선
+
+### 기술
+- `section0.xml` 루트를 `hp:sec` 단독 구조에서 `hs:sec` + `hp:secPr` 구조로 변경
+- `content.hpf`를 `hc:package` 구조로 변경
+- ODF manifest 네임스페이스와 `odf:file-entry` 속성 적용
+- 기본 글꼴/문단/글자 모양 참조를 `header.xml`에 명시
+
+---
+
+## v4.3 — HWPX 보고서 추출 `2026-06`
+
+### 변경 내용
+- **총괄 HWPX 다운로드** 버튼 추가
+- **부서별 HWPX ZIP 다운로드** 기능 추가
+- 기존 Excel 총괄/부서별 보고서는 그대로 유지
+- 부서별 HWPX에는 기존 부서별 Excel과 동일하게 IP 주소 미포함
+
+### 기술
+- `buildOverallReportModel()`, `buildDeptReportModel()` 추가: Excel/HWPX 공용 리포트 모델
+- `createHwpxBlob()`: JSZip 기반 HWPX 패키지 생성
+- `exportOverallHwpx()`: 종합 HWPX 단일 파일 생성
+- `doExportDeptHwpxZip()`: 부서별 HWPX 파일 생성 후 ZIP 압축
+- XML escape 및 파일명 sanitize 유틸 추가
+
+---
+
 ## v4.2 — 보안 개선 `2026-06`
 
 ### 변경 내용
