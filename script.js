@@ -1783,8 +1783,11 @@ function hwpxHeading(text){
   return hwpxPara(text,'0','6');
 }
 
+const HWPX_BODY_WIDTH=48190;
+const HWPX_TABLE_ROWS_PER_BLOCK=28;
+
 function calcHwpxWidths(weights){
-  const total=42520;
+  const total=HWPX_BODY_WIDTH;
   const sum=weights.reduce((a,b)=>a+b,0)||1;
   const widths=weights.map(w=>Math.max(1800,Math.round(total*w/sum)));
   const diff=total-widths.reduce((a,b)=>a+b,0);
@@ -1794,10 +1797,10 @@ function calcHwpxWidths(weights){
 
 function hwpxCell(text,rowAddr,colAddr,width,height,isHeader){
   const borderId=isHeader?'4':'3';
-  const charId=isHeader?'6':'0';
+  const charId=isHeader?'21':'0';
   return '<hp:tc name="" header="'+(isHeader?'1':'0')+'" hasMargin="0" protect="0" editable="0" dirty="1" borderFillIDRef="'+borderId+'">'+
     '<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">'+
-      '<hp:p id="'+hwpxId()+'" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'+
+      '<hp:p id="'+hwpxId()+'" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'+
         '<hp:run charPrIDRef="'+charId+'"><hp:t>'+hwpxEsc(text)+'</hp:t></hp:run>'+
       '</hp:p>'+
     '</hp:subList>'+
@@ -1808,13 +1811,10 @@ function hwpxCell(text,rowAddr,colAddr,width,height,isHeader){
   '</hp:tc>';
 }
 
-function hwpxTable(headers, rows, weights, limit){
-  const body=limit?rows.slice(0,limit):rows;
-  const notice=(limit&&rows.length>limit)?[['이후 '+(rows.length-limit)+'건은 Excel 상세 보고서에서 확인']]:[];
-  const allRows=[headers].concat(body,notice);
+function hwpxTableBlock(headers, rows, widths){
+  const allRows=[headers].concat(rows);
   const colCnt=headers.length;
   const rowCnt=allRows.length;
-  const widths=calcHwpxWidths(weights||headers.map(()=>1));
   const tableHeight=Math.max(2400,rowCnt*1350);
   const trs=allRows.map((row,rowIdx)=>{
     const isHeader=rowIdx===0;
@@ -1826,14 +1826,27 @@ function hwpxTable(headers, rows, weights, limit){
   return '  <hp:p id="'+hwpxId()+'" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'+
     '<hp:run charPrIDRef="0">'+
       '<hp:tbl id="'+hwpxId()+'" zOrder="0" numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" pageBreak="CELL" repeatHeader="1" rowCnt="'+rowCnt+'" colCnt="'+colCnt+'" cellSpacing="0" borderFillIDRef="3" noAdjust="0">'+
-        '<hp:sz width="42520" widthRelTo="ABSOLUTE" height="'+tableHeight+'" heightRelTo="ABSOLUTE" protect="0"/>'+
-        '<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>'+
-        '<hp:outMargin left="0" right="0" top="120" bottom="220"/>'+
+        '<hp:sz width="'+HWPX_BODY_WIDTH+'" widthRelTo="ABSOLUTE" height="'+tableHeight+'" heightRelTo="ABSOLUTE" protect="0"/>'+
+        '<hp:pos treatAsChar="0" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>'+
+        '<hp:outMargin left="0" right="0" top="120" bottom="180"/>'+
         '<hp:inMargin left="0" right="0" top="0" bottom="0"/>'+
         trs+
       '</hp:tbl>'+
     '</hp:run>'+
   '</hp:p>';
+}
+
+function hwpxTable(headers, rows, weights, limit){
+  const body=limit?rows.slice(0,limit):rows;
+  const notice=(limit&&rows.length>limit)?[['이후 '+(rows.length-limit)+'건은 Excel 상세 보고서에서 확인']]:[];
+  const tableRows=body.concat(notice);
+  const widths=calcHwpxWidths(weights||headers.map(()=>1));
+  const chunks=[];
+  for(let i=0;i<tableRows.length;i+=HWPX_TABLE_ROWS_PER_BLOCK){
+    chunks.push(hwpxTableBlock(headers,tableRows.slice(i,i+HWPX_TABLE_ROWS_PER_BLOCK),widths));
+  }
+  if(!chunks.length) chunks.push(hwpxTableBlock(headers,[],widths));
+  return chunks.join('\n');
 }
 
 const HWPX_SKELETON_URL='https://raw.githubusercontent.com/airmang/python-hwpx/main/examples/Skeleton.hwpx';
@@ -1852,28 +1865,81 @@ async function loadHwpxSkeletonZip(){
   return JSZip.loadAsync(bytes.slice(0));
 }
 
+function increaseHwpxHeaderItemCount(xml, listName, delta){
+  const re=new RegExp('<hh:'+listName+' itemCnt="(\\d+)">');
+  return xml.replace(re,(_,cnt)=>'<hh:'+listName+' itemCnt="'+((Number(cnt)||0)+delta)+'">');
+}
+
 async function ensureHwpxTableStyles(zip){
   const file=zip.file('Contents/header.xml');
   if(!file) return;
   let headerXml=await file.async('string');
-  if(headerXml.includes('<hh:borderFill id="3"')&&headerXml.includes('<hh:borderFill id="4"')) return;
+  headerXml=headerXml.replace(/(<hh:font\b[^>]*\bface=")[^"]*(")/g,'$1맑은 고딕$2');
+
+  if(!headerXml.includes('<hh:charPr id="21"')){
+    const tableHeaderCharPr=
+      '<hh:charPr id="21" height="1000" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
+        '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+        '<hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+        '<hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:bold/>'+
+        '<hh:underline type="NONE" shape="SOLID" color="#000000"/>'+
+        '<hh:strikeout shape="NONE" color="#000000"/>'+
+        '<hh:outline type="NONE"/>'+
+        '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'+
+      '</hh:charPr>';
+    headerXml=increaseHwpxHeaderItemCount(headerXml,'charProperties',1);
+    headerXml=headerXml.replace('</hh:charProperties>',tableHeaderCharPr+'</hh:charProperties>');
+  }
+
+  if(!headerXml.includes('<hh:paraPr id="20"')){
+    const centeredParaPr=
+      '<hh:paraPr id="20" tabPrIDRef="0" condense="0" fontLineHeight="0" snapToGrid="1" suppressLineNumbers="0" checked="0" textDir="LTR">'+
+        '<hh:align horizontal="CENTER" vertical="BASELINE"/>'+
+        '<hh:heading type="NONE" idRef="0" level="0"/>'+
+        '<hh:breakSetting breakLatinWord="KEEP_WORD" breakNonLatinWord="BREAK_WORD" widowOrphan="0" keepWithNext="0" keepLines="0" pageBreakBefore="0" lineWrap="BREAK"/>'+
+        '<hh:autoSpacing eAsianEng="0" eAsianNum="0"/>'+
+        '<hp:switch>'+
+          '<hp:case hp:required-namespace="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar">'+
+            '<hh:margin><hc:intent value="0" unit="HWPUNIT"/><hc:left value="0" unit="HWPUNIT"/><hc:right value="0" unit="HWPUNIT"/><hc:prev value="0" unit="HWPUNIT"/><hc:next value="0" unit="HWPUNIT"/></hh:margin>'+
+            '<hh:lineSpacing type="PERCENT" value="130" unit="HWPUNIT"/>'+
+          '</hp:case>'+
+          '<hp:default>'+
+            '<hh:margin><hc:intent value="0" unit="HWPUNIT"/><hc:left value="0" unit="HWPUNIT"/><hc:right value="0" unit="HWPUNIT"/><hc:prev value="0" unit="HWPUNIT"/><hc:next value="0" unit="HWPUNIT"/></hh:margin>'+
+            '<hh:lineSpacing type="PERCENT" value="130" unit="HWPUNIT"/>'+
+          '</hp:default>'+
+        '</hp:switch>'+
+        '<hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0" offsetTop="0" offsetBottom="0" connect="0" ignoreMargin="0"/>'+
+      '</hh:paraPr>';
+    headerXml=increaseHwpxHeaderItemCount(headerXml,'paraProperties',1);
+    headerXml=headerXml.replace('</hh:paraProperties>',centeredParaPr+'</hh:paraProperties>');
+  }
+
   const tableBorder=
     '<hh:borderFill id="3" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">'+
       '<hh:slash type="NONE" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'+
-      '<hh:leftBorder type="SOLID" width="0.12 mm" color="#7D8A7F"/><hh:rightBorder type="SOLID" width="0.12 mm" color="#7D8A7F"/>'+
-      '<hh:topBorder type="SOLID" width="0.12 mm" color="#7D8A7F"/><hh:bottomBorder type="SOLID" width="0.12 mm" color="#7D8A7F"/>'+
+      '<hh:leftBorder type="NONE" width="0.1 mm" color="#FFFFFF"/><hh:rightBorder type="NONE" width="0.1 mm" color="#FFFFFF"/>'+
+      '<hh:topBorder type="SOLID" width="0.5 mm" color="#000000"/><hh:bottomBorder type="SOLID" width="0.5 mm" color="#000000"/>'+
       '<hh:diagonal type="NONE" width="0.1 mm" color="#000000"/>'+
     '</hh:borderFill>';
   const headerBorder=
     '<hh:borderFill id="4" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">'+
       '<hh:slash type="NONE" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'+
-      '<hh:leftBorder type="SOLID" width="0.12 mm" color="#4A6650"/><hh:rightBorder type="SOLID" width="0.12 mm" color="#4A6650"/>'+
-      '<hh:topBorder type="SOLID" width="0.12 mm" color="#4A6650"/><hh:bottomBorder type="SOLID" width="0.12 mm" color="#4A6650"/>'+
+      '<hh:leftBorder type="NONE" width="0.1 mm" color="#FFFFFF"/><hh:rightBorder type="NONE" width="0.1 mm" color="#FFFFFF"/>'+
+      '<hh:topBorder type="SOLID" width="0.5 mm" color="#000000"/><hh:bottomBorder type="SOLID" width="0.5 mm" color="#000000"/>'+
       '<hh:diagonal type="NONE" width="0.1 mm" color="#000000"/>'+
-      '<hc:fillBrush><hc:winBrush faceColor="#E7F3EA" hatchColor="#000000" alpha="0"/></hc:fillBrush>'+
+      '<hc:fillBrush><hc:winBrush faceColor="#D9D9D9" hatchColor="#000000" alpha="0"/></hc:fillBrush>'+
     '</hh:borderFill>';
-  headerXml=headerXml.replace(/<hh:borderFills itemCnt="(\d+)">/,(_,cnt)=>'<hh:borderFills itemCnt="'+Math.max(Number(cnt)||0,4)+'">');
-  headerXml=headerXml.replace('</hh:borderFills>',tableBorder+headerBorder+'</hh:borderFills>');
+  if(!headerXml.includes('<hh:borderFill id="3"')){
+    headerXml=increaseHwpxHeaderItemCount(headerXml,'borderFills',1);
+    headerXml=headerXml.replace('</hh:borderFills>',tableBorder+'</hh:borderFills>');
+  }
+  if(!headerXml.includes('<hh:borderFill id="4"')){
+    headerXml=increaseHwpxHeaderItemCount(headerXml,'borderFills',1);
+    headerXml=headerXml.replace('</hh:borderFills>',headerBorder+'</hh:borderFills>');
+  }
   zip.file('Contents/header.xml',headerXml);
 }
 
@@ -1882,7 +1948,7 @@ function buildHwpxParagraphs(model){
   const s=model.stats;
   const chunks=[
     hwpxPara(model.title,'12','5'),
-    hwpxPara('기관명: '+meta.orgName),
+    hwpxPara('부서명: '+(model.type==='dept'?model.dept:'전체')),
     hwpxPara('기준연월: '+(meta.monthLabel||meta.monthValue||'-')),
     hwpxPara('생성일시: '+meta.generatedAt),
     hwpxHeading('[1. 점검 요약]'),
@@ -1958,7 +2024,7 @@ function buildHwpxSectionXml(model){
           '<hp:startNum pageStartsOn="BOTH" page="0" pic="0" tbl="0" equation="0"/>'+
           '<hp:visibility hideFirstHeader="0" hideFirstFooter="0" hideFirstMasterPage="0" border="SHOW_ALL" fill="SHOW_ALL" hideFirstPageNum="0" hideFirstEmptyLine="0" showLineNumber="0"/>'+
           '<hp:lineNumberShape restartType="0" countBy="0" distance="0" startNumber="0"/>'+
-          '<hp:pagePr landscape="WIDELY" width="59528" height="84186" gutterType="LEFT_ONLY"><hp:margin header="4252" footer="4252" gutter="0" left="8504" right="8504" top="5668" bottom="4252"/></hp:pagePr>'+
+          '<hp:pagePr landscape="WIDELY" width="59528" height="84186" gutterType="LEFT_ONLY"><hp:margin header="2835" footer="2835" gutter="0" left="5669" right="5669" top="4252" bottom="4252"/></hp:pagePr>'+
           '<hp:footNotePr><hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/><hp:noteLine length="-1" type="SOLID" width="0.12 mm" color="#000000"/><hp:noteSpacing betweenNotes="283" belowLine="567" aboveLine="850"/><hp:numbering type="CONTINUOUS" newNum="1"/><hp:placement place="EACH_COLUMN" beneathText="0"/></hp:footNotePr>'+
           '<hp:endNotePr><hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/><hp:noteLine length="14692344" type="SOLID" width="0.12 mm" color="#000000"/><hp:noteSpacing betweenNotes="0" belowLine="567" aboveLine="850"/><hp:numbering type="CONTINUOUS" newNum="1"/><hp:placement place="END_OF_DOCUMENT" beneathText="0"/></hp:endNotePr>'+
           '<hp:pageBorderFill type="BOTH" borderFillIDRef="1" textBorder="PAPER" headerInside="0" footerInside="0" fillArea="PAPER"><hp:offset left="1417" right="1417" top="1417" bottom="1417"/></hp:pageBorderFill>'+
