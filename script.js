@@ -1780,11 +1780,10 @@ function hwpxPara(text, paraPrId='0', charPrId='0'){
 }
 
 function hwpxHeading(text){
-  return hwpxPara(text,'0','6');
+  return hwpxPara(text,'0','22');
 }
 
 const HWPX_BODY_WIDTH=48190;
-const HWPX_TABLE_ROWS_PER_BLOCK=28;
 
 function calcHwpxWidths(weights){
   const total=HWPX_BODY_WIDTH;
@@ -1795,8 +1794,15 @@ function calcHwpxWidths(weights){
   return widths;
 }
 
-function hwpxCell(text,rowAddr,colAddr,width,height,isHeader){
-  const borderId=isHeader?'4':'3';
+function hwpxCellBorderId(isHeader, colAddr, colCnt){
+  if(colCnt<=1) return isHeader?'9':'10';
+  if(colAddr===0) return isHeader?'4':'3';
+  if(colAddr===colCnt-1) return isHeader?'8':'6';
+  return isHeader?'7':'5';
+}
+
+function hwpxCell(text,rowAddr,colAddr,colCnt,width,height,isHeader){
+  const borderId=hwpxCellBorderId(isHeader,colAddr,colCnt);
   const charId=isHeader?'21':'0';
   return '<hp:tc name="" header="'+(isHeader?'1':'0')+'" hasMargin="0" protect="0" editable="0" dirty="1" borderFillIDRef="'+borderId+'">'+
     '<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">'+
@@ -1811,8 +1817,12 @@ function hwpxCell(text,rowAddr,colAddr,width,height,isHeader){
   '</hp:tc>';
 }
 
-function hwpxTableBlock(headers, rows, widths){
-  const allRows=[headers].concat(rows);
+function hwpxTable(headers, rows, weights, limit){
+  const body=limit?rows.slice(0,limit):rows;
+  const notice=(limit&&rows.length>limit)?[['이후 '+(rows.length-limit)+'건은 Excel 상세 보고서에서 확인']]:[];
+  const widths=calcHwpxWidths(weights||headers.map(()=>1));
+  const rowsForTable=body.concat(notice);
+  const allRows=[headers].concat(rowsForTable);
   const colCnt=headers.length;
   const rowCnt=allRows.length;
   const tableHeight=Math.max(2400,rowCnt*1350);
@@ -1820,7 +1830,7 @@ function hwpxTableBlock(headers, rows, widths){
     const isHeader=rowIdx===0;
     const height=isHeader?1500:1350;
     const normalized=headers.map((_,idx)=>row[idx] == null ? '' : row[idx]);
-    const cells=normalized.map((cell,colIdx)=>hwpxCell(cell,rowIdx,colIdx,widths[colIdx],height,isHeader)).join('');
+    const cells=normalized.map((cell,colIdx)=>hwpxCell(cell,rowIdx,colIdx,colCnt,widths[colIdx],height,isHeader)).join('');
     return '<hp:tr>'+cells+'</hp:tr>';
   }).join('');
   return '  <hp:p id="'+hwpxId()+'" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'+
@@ -1833,20 +1843,7 @@ function hwpxTableBlock(headers, rows, widths){
         trs+
       '</hp:tbl>'+
     '</hp:run>'+
-  '</hp:p>';
-}
-
-function hwpxTable(headers, rows, weights, limit){
-  const body=limit?rows.slice(0,limit):rows;
-  const notice=(limit&&rows.length>limit)?[['이후 '+(rows.length-limit)+'건은 Excel 상세 보고서에서 확인']]:[];
-  const tableRows=body.concat(notice);
-  const widths=calcHwpxWidths(weights||headers.map(()=>1));
-  const chunks=[];
-  for(let i=0;i<tableRows.length;i+=HWPX_TABLE_ROWS_PER_BLOCK){
-    chunks.push(hwpxTableBlock(headers,tableRows.slice(i,i+HWPX_TABLE_ROWS_PER_BLOCK),widths));
-  }
-  if(!chunks.length) chunks.push(hwpxTableBlock(headers,[],widths));
-  return chunks.join('\n');
+  '</hp:p>\n'+hwpxPara('');
 }
 
 const HWPX_SKELETON_URL='https://raw.githubusercontent.com/airmang/python-hwpx/main/examples/Skeleton.hwpx';
@@ -1868,6 +1865,17 @@ async function loadHwpxSkeletonZip(){
 function increaseHwpxHeaderItemCount(xml, listName, delta){
   const re=new RegExp('<hh:'+listName+' itemCnt="(\\d+)">');
   return xml.replace(re,(_,cnt)=>'<hh:'+listName+' itemCnt="'+((Number(cnt)||0)+delta)+'">');
+}
+
+function hwpxBorderFillXml(id, fillColor, leftType, rightType){
+  const fill=fillColor?'<hc:fillBrush><hc:winBrush faceColor="'+fillColor+'" hatchColor="#000000" alpha="0"/></hc:fillBrush>':'';
+  return '<hh:borderFill id="'+id+'" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">'+
+    '<hh:slash type="NONE" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'+
+    '<hh:leftBorder type="'+leftType+'" width="0.12 mm" color="#000000"/><hh:rightBorder type="'+rightType+'" width="0.12 mm" color="#000000"/>'+
+    '<hh:topBorder type="SOLID" width="0.5 mm" color="#000000"/><hh:bottomBorder type="SOLID" width="0.5 mm" color="#000000"/>'+
+    '<hh:diagonal type="NONE" width="0.1 mm" color="#000000"/>'+
+    fill+
+  '</hh:borderFill>';
 }
 
 async function ensureHwpxTableStyles(zip){
@@ -1894,6 +1902,24 @@ async function ensureHwpxTableStyles(zip){
     headerXml=headerXml.replace('</hh:charProperties>',tableHeaderCharPr+'</hh:charProperties>');
   }
 
+  if(!headerXml.includes('<hh:charPr id="22"')){
+    const sectionHeadingCharPr=
+      '<hh:charPr id="22" height="1300" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
+        '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+        '<hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+        '<hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:bold/>'+
+        '<hh:underline type="NONE" shape="SOLID" color="#000000"/>'+
+        '<hh:strikeout shape="NONE" color="#000000"/>'+
+        '<hh:outline type="NONE"/>'+
+        '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'+
+      '</hh:charPr>';
+    headerXml=increaseHwpxHeaderItemCount(headerXml,'charProperties',1);
+    headerXml=headerXml.replace('</hh:charProperties>',sectionHeadingCharPr+'</hh:charProperties>');
+  }
+
   if(!headerXml.includes('<hh:paraPr id="20"')){
     const centeredParaPr=
       '<hh:paraPr id="20" tabPrIDRef="0" condense="0" fontLineHeight="0" snapToGrid="1" suppressLineNumbers="0" checked="0" textDir="LTR">'+
@@ -1917,29 +1943,22 @@ async function ensureHwpxTableStyles(zip){
     headerXml=headerXml.replace('</hh:paraProperties>',centeredParaPr+'</hh:paraProperties>');
   }
 
-  const tableBorder=
-    '<hh:borderFill id="3" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">'+
-      '<hh:slash type="NONE" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'+
-      '<hh:leftBorder type="NONE" width="0.1 mm" color="#FFFFFF"/><hh:rightBorder type="NONE" width="0.1 mm" color="#FFFFFF"/>'+
-      '<hh:topBorder type="SOLID" width="0.5 mm" color="#000000"/><hh:bottomBorder type="SOLID" width="0.5 mm" color="#000000"/>'+
-      '<hh:diagonal type="NONE" width="0.1 mm" color="#000000"/>'+
-    '</hh:borderFill>';
-  const headerBorder=
-    '<hh:borderFill id="4" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">'+
-      '<hh:slash type="NONE" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'+
-      '<hh:leftBorder type="NONE" width="0.1 mm" color="#FFFFFF"/><hh:rightBorder type="NONE" width="0.1 mm" color="#FFFFFF"/>'+
-      '<hh:topBorder type="SOLID" width="0.5 mm" color="#000000"/><hh:bottomBorder type="SOLID" width="0.5 mm" color="#000000"/>'+
-      '<hh:diagonal type="NONE" width="0.1 mm" color="#000000"/>'+
-      '<hc:fillBrush><hc:winBrush faceColor="#D9D9D9" hatchColor="#000000" alpha="0"/></hc:fillBrush>'+
-    '</hh:borderFill>';
-  if(!headerXml.includes('<hh:borderFill id="3"')){
-    headerXml=increaseHwpxHeaderItemCount(headerXml,'borderFills',1);
-    headerXml=headerXml.replace('</hh:borderFills>',tableBorder+'</hh:borderFills>');
-  }
-  if(!headerXml.includes('<hh:borderFill id="4"')){
-    headerXml=increaseHwpxHeaderItemCount(headerXml,'borderFills',1);
-    headerXml=headerXml.replace('</hh:borderFills>',headerBorder+'</hh:borderFills>');
-  }
+  const borderFills=[
+    ['3',null,'NONE','SOLID'],
+    ['4','#D9D9D9','NONE','SOLID'],
+    ['5',null,'SOLID','SOLID'],
+    ['6',null,'SOLID','NONE'],
+    ['7','#D9D9D9','SOLID','SOLID'],
+    ['8','#D9D9D9','SOLID','NONE'],
+    ['9','#D9D9D9','NONE','NONE'],
+    ['10',null,'NONE','NONE'],
+  ];
+  borderFills.forEach(([id,fill,left,right])=>{
+    if(!headerXml.includes('<hh:borderFill id="'+id+'"')){
+      headerXml=increaseHwpxHeaderItemCount(headerXml,'borderFills',1);
+      headerXml=headerXml.replace('</hh:borderFills>',hwpxBorderFillXml(id,fill,left,right)+'</hh:borderFills>');
+    }
+  });
   zip.file('Contents/header.xml',headerXml);
 }
 
@@ -1951,7 +1970,7 @@ function buildHwpxParagraphs(model){
     hwpxPara('부서명: '+(model.type==='dept'?model.dept:'전체')),
     hwpxPara('기준연월: '+(meta.monthLabel||meta.monthValue||'-')),
     hwpxPara('생성일시: '+meta.generatedAt),
-    hwpxHeading('[1. 점검 요약]'),
+    hwpxHeading('1. 점검 요약'),
     hwpxTable(
       ['구분','값'],
       [
@@ -1966,14 +1985,14 @@ function buildHwpxParagraphs(model){
   ];
 
   if(model.type==='overall'){
-    chunks.push(hwpxHeading('[2. 부서별 현황]'));
+    chunks.push(hwpxHeading('2. 부서별 현황'));
     chunks.push(hwpxTable(
       ['부서명','총원','안전','취약','미점검','점검률'],
       model.deptSummary.map(d=>[d.dept,d.total,d.safe,d.vuln,d.unc,d.rate+'%'])
     ,[4,1,1,1,1,1]));
   }
 
-  chunks.push(hwpxHeading(model.type==='overall'?'[3. 조치 필요 대상]':'[2. 조치 필요 대상]'));
+  chunks.push(hwpxHeading(model.type==='overall'?'3. 조치 필요 대상':'2. 조치 필요 대상'));
   if(model.issueRows.length){
     chunks.push(hwpxTable(
       model.type==='overall'?['부서명','이름','IP','점수','조치 필요 항목']:['부서명','이름','점수','조치 필요 항목'],
@@ -1988,7 +2007,7 @@ function buildHwpxParagraphs(model){
     chunks.push(hwpxPara('조치 필요 대상 없음'));
   }
 
-  chunks.push(hwpxHeading(model.type==='overall'?'[4. 취약 항목 분석]':'[3. 취약 항목 분석]'));
+  chunks.push(hwpxHeading(model.type==='overall'?'4. 취약 항목 분석':'3. 취약 항목 분석'));
   if(model.vulnItems.length){
     const base=model.type==='overall'?s.checked:model.checkedCnt;
     chunks.push(hwpxTable(
@@ -1999,7 +2018,7 @@ function buildHwpxParagraphs(model){
     chunks.push(hwpxPara('취약 항목 없음'));
   }
 
-  chunks.push(hwpxHeading(model.type==='overall'?'[5. 전체 점검 결과]':'[4. 부서 점검 결과]'));
+  chunks.push(hwpxHeading(model.type==='overall'?'5. 전체 점검 결과':'4. 부서 점검 결과'));
   chunks.push(hwpxTable(
     model.type==='overall'?['부서명','이름','IP','점수','비고']:['부서명','이름','점수','비고'],
     model.rows.map(r=>model.type==='overall'
@@ -2033,7 +2052,6 @@ function buildHwpxSectionXml(model){
         '</hp:secPr>'+
         '<hp:ctrl><hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1" sameSz="1" sameGap="0"/></hp:ctrl>'+
       '</hp:run>'+
-      '<hp:run charPrIDRef="0"><hp:t/></hp:run>'+
     '</hp:p>\n'+body+'</hs:sec>';
 }
 
