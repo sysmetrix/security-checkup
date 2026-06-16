@@ -1673,6 +1673,460 @@ function buildVulnAnalysis(rows){
   return Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
 }
 
+function calcReportStats(rows){
+  const total=rows.length;
+  const safe=rows.filter(r=>parseInt(r.score)===100).length;
+  const vuln=rows.filter(r=>{const n=parseInt(r.score);return !isNaN(n)&&n>0&&n<100;}).length;
+  const unc=rows.filter(r=>r.notes==='미점검'||r.notes==='미점검(겸직)').length;
+  const checked=total-unc;
+  const rate=total?Math.round(checked/total*100):0;
+  return {total,safe,vuln,unc,checked,rate};
+}
+
+function buildReportMeta(){
+  const mv=getReportMonth();
+  let label='';
+  if(mv){
+    const [y,m]=mv.split('-');
+    label=y+'년 '+parseInt(m,10)+'월';
+  }
+  return {
+    monthValue: mv,
+    monthLabel: label,
+    generatedAt: new Date().toLocaleString('ko-KR'),
+    orgName: '부천여성청소년재단',
+  };
+}
+
+function normalizeReportRow(r, includeIp){
+  const scoreText=r.notes==='미점검'||r.notes==='미점검(겸직)'?'미점검':(r.score||'');
+  const nameText=r.compName&&r.compName!==r.name?r.name+'('+r.compName+')':r.name;
+  return {
+    dept: r.dept||'',
+    name: nameText||'',
+    ip: includeIp?(r.ip||''):'',
+    score: scoreText,
+    notes: r.notes||'이상없음',
+  };
+}
+
+function buildOverallReportModel(){
+  const rows=buildFinalRows();
+  const deptSummary=buildDeptSummary(rows)
+    .sort((a,b)=>deptOrderIdx(a.dept)-deptOrderIdx(b.dept)||b.vuln-a.vuln)
+    .map(d=>({...d, checked:d.safe+d.vuln, rate:d.total?Math.round((d.safe+d.vuln)/d.total*100):0}));
+  return {
+    type: 'overall',
+    title: 'PC 보안점검 결과 종합 보고서',
+    meta: buildReportMeta(),
+    stats: calcReportStats(rows),
+    rows: rows.map(r=>normalizeReportRow(r,true)),
+    issueRows: rows.filter(r=>{
+      const sc=parseInt(r.score);
+      return r.notes==='미점검'||r.notes==='미점검(겸직)'||(!isNaN(sc)&&sc>0&&sc<100);
+    }).map(r=>normalizeReportRow(r,true)),
+    deptSummary,
+    vulnItems: buildVulnAnalysis(rows),
+  };
+}
+
+function buildDeptReportModel(dept, deptRows){
+  const stats=calcReportStats(deptRows);
+  const checkedCnt=deptRows.filter(r=>r.row&&!r.isSameAs).length;
+  return {
+    type: 'dept',
+    title: dept+' PC 보안점검 결과 보고서',
+    dept,
+    meta: buildReportMeta(),
+    stats,
+    rows: deptRows.map(r=>normalizeReportRow(r,false)),
+    issueRows: deptRows.filter(r=>{
+      const sc=parseInt(r.score);
+      return r.notes==='미점검'||r.notes==='미점검(겸직)'||(!isNaN(sc)&&sc>0&&sc<100);
+    }).map(r=>normalizeReportRow(r,false)),
+    vulnItems: buildVulnAnalysis(deptRows),
+    checkedCnt,
+  };
+}
+
+function safeFileName(name){
+  return String(name||'')
+    .replace(/[\\/:*?"<>|]/g,'_')
+    .replace(/\s+/g,' ')
+    .trim() || '보고서';
+}
+
+function hwpxEsc(v){
+  return String(v==null?'':v)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&apos;');
+}
+
+function hwpxId(){
+  return String(1000000000+Math.floor(Math.random()*2000000000));
+}
+
+function hwpxPara(text, paraPrId='0', charPrId='0'){
+  const lines=String(text==null?'':text).split(/\r?\n/);
+  return lines.map(line=>{
+    const id=hwpxId();
+    return '  <hp:p id="'+id+'" paraPrIDRef="'+paraPrId+'" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'+
+      '<hp:run charPrIDRef="'+charPrId+'"><hp:t>'+hwpxEsc(line)+'</hp:t></hp:run>'+
+    '</hp:p>';
+  }).join('');
+}
+
+function hwpxHeading(text){
+  return hwpxPara(text,'0','22');
+}
+
+const HWPX_BODY_WIDTH=48190;
+
+function calcHwpxWidths(weights){
+  const total=HWPX_BODY_WIDTH;
+  const sum=weights.reduce((a,b)=>a+b,0)||1;
+  const widths=weights.map(w=>Math.max(1800,Math.round(total*w/sum)));
+  const diff=total-widths.reduce((a,b)=>a+b,0);
+  widths[widths.length-1]+=diff;
+  return widths;
+}
+
+function hwpxCellBorderId(isHeader, colAddr, colCnt){
+  if(colCnt<=1) return isHeader?'9':'10';
+  if(colAddr===0) return isHeader?'4':'3';
+  if(colAddr===colCnt-1) return isHeader?'8':'6';
+  return isHeader?'7':'5';
+}
+
+function hwpxCell(text,rowAddr,colAddr,colCnt,width,height,isHeader){
+  const borderId=hwpxCellBorderId(isHeader,colAddr,colCnt);
+  const charId=isHeader?'21':'0';
+  return '<hp:tc name="" header="'+(isHeader?'1':'0')+'" hasMargin="0" protect="0" editable="0" dirty="1" borderFillIDRef="'+borderId+'">'+
+    '<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">'+
+      '<hp:p id="'+hwpxId()+'" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'+
+        '<hp:run charPrIDRef="'+charId+'"><hp:t>'+hwpxEsc(text)+'</hp:t></hp:run>'+
+      '</hp:p>'+
+    '</hp:subList>'+
+    '<hp:cellAddr colAddr="'+colAddr+'" rowAddr="'+rowAddr+'"/>'+
+    '<hp:cellSpan colSpan="1" rowSpan="1"/>'+
+    '<hp:cellSz width="'+width+'" height="'+height+'"/>'+
+    '<hp:cellMargin left="180" right="180" top="140" bottom="140"/>'+
+  '</hp:tc>';
+}
+
+function hwpxTable(headers, rows, weights, limit){
+  const body=limit?rows.slice(0,limit):rows;
+  const notice=(limit&&rows.length>limit)?[['이후 '+(rows.length-limit)+'건은 Excel 상세 보고서에서 확인']]:[];
+  const widths=calcHwpxWidths(weights||headers.map(()=>1));
+  const rowsForTable=body.concat(notice);
+  const allRows=[headers].concat(rowsForTable);
+  const colCnt=headers.length;
+  const rowCnt=allRows.length;
+  const tableHeight=Math.max(2400,rowCnt*1350);
+  const trs=allRows.map((row,rowIdx)=>{
+    const isHeader=rowIdx===0;
+    const height=isHeader?1500:1350;
+    const normalized=headers.map((_,idx)=>row[idx] == null ? '' : row[idx]);
+    const cells=normalized.map((cell,colIdx)=>hwpxCell(cell,rowIdx,colIdx,colCnt,widths[colIdx],height,isHeader)).join('');
+    return '<hp:tr>'+cells+'</hp:tr>';
+  }).join('');
+  return '  <hp:p id="'+hwpxId()+'" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'+
+    '<hp:run charPrIDRef="0">'+
+      '<hp:tbl id="'+hwpxId()+'" zOrder="0" numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" pageBreak="CELL" repeatHeader="1" rowCnt="'+rowCnt+'" colCnt="'+colCnt+'" cellSpacing="0" borderFillIDRef="3" noAdjust="0">'+
+        '<hp:sz width="'+HWPX_BODY_WIDTH+'" widthRelTo="ABSOLUTE" height="'+tableHeight+'" heightRelTo="ABSOLUTE" protect="0"/>'+
+        '<hp:pos treatAsChar="0" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>'+
+        '<hp:outMargin left="0" right="0" top="120" bottom="180"/>'+
+        '<hp:inMargin left="0" right="0" top="0" bottom="0"/>'+
+        trs+
+      '</hp:tbl>'+
+    '</hp:run>'+
+  '</hp:p>\n'+hwpxPara('');
+}
+
+const HWPX_SKELETON_URL='https://raw.githubusercontent.com/airmang/python-hwpx/main/examples/Skeleton.hwpx';
+const HWPX_SECTION_NS='xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph" xmlns:hp10="http://www.hancom.co.kr/hwpml/2016/paragraph" xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head" xmlns:hhs="http://www.hancom.co.kr/hwpml/2011/history" xmlns:hm="http://www.hancom.co.kr/hwpml/2011/master-page" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf/" xmlns:ooxmlchart="http://www.hancom.co.kr/hwpml/2016/ooxmlchart" xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0"';
+let _hwpxSkeletonBytesPromise=null;
+
+async function loadHwpxSkeletonZip(){
+  if(typeof JSZip==='undefined') throw new Error('JSZip 로드 중입니다. 잠시 후 다시 시도하세요.');
+  if(!_hwpxSkeletonBytesPromise){
+    _hwpxSkeletonBytesPromise=fetch(HWPX_SKELETON_URL,{cache:'force-cache'}).then(res=>{
+      if(!res.ok) throw new Error('HWPX 템플릿 다운로드 실패 (HTTP '+res.status+')');
+      return res.arrayBuffer();
+    });
+  }
+  const bytes=await _hwpxSkeletonBytesPromise;
+  return JSZip.loadAsync(bytes.slice(0));
+}
+
+function increaseHwpxHeaderItemCount(xml, listName, delta){
+  const re=new RegExp('<hh:'+listName+' itemCnt="(\\d+)">');
+  return xml.replace(re,(_,cnt)=>'<hh:'+listName+' itemCnt="'+((Number(cnt)||0)+delta)+'">');
+}
+
+function hwpxBorderFillXml(id, fillColor, leftType, rightType){
+  const fill=fillColor?'<hc:fillBrush><hc:winBrush faceColor="'+fillColor+'" hatchColor="#000000" alpha="0"/></hc:fillBrush>':'';
+  return '<hh:borderFill id="'+id+'" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">'+
+    '<hh:slash type="NONE" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'+
+    '<hh:leftBorder type="'+leftType+'" width="0.12 mm" color="#000000"/><hh:rightBorder type="'+rightType+'" width="0.12 mm" color="#000000"/>'+
+    '<hh:topBorder type="SOLID" width="0.5 mm" color="#000000"/><hh:bottomBorder type="SOLID" width="0.5 mm" color="#000000"/>'+
+    '<hh:diagonal type="NONE" width="0.1 mm" color="#000000"/>'+
+    fill+
+  '</hh:borderFill>';
+}
+
+async function ensureHwpxTableStyles(zip){
+  const file=zip.file('Contents/header.xml');
+  if(!file) return;
+  let headerXml=await file.async('string');
+  headerXml=headerXml.replace(/(<hh:font\b[^>]*\bface=")[^"]*(")/g,'$1맑은 고딕$2');
+
+  if(!headerXml.includes('<hh:charPr id="21"')){
+    const tableHeaderCharPr=
+      '<hh:charPr id="21" height="1000" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
+        '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+        '<hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+        '<hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:bold/>'+
+        '<hh:underline type="NONE" shape="SOLID" color="#000000"/>'+
+        '<hh:strikeout shape="NONE" color="#000000"/>'+
+        '<hh:outline type="NONE"/>'+
+        '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'+
+      '</hh:charPr>';
+    headerXml=increaseHwpxHeaderItemCount(headerXml,'charProperties',1);
+    headerXml=headerXml.replace('</hh:charProperties>',tableHeaderCharPr+'</hh:charProperties>');
+  }
+
+  if(!headerXml.includes('<hh:charPr id="22"')){
+    const sectionHeadingCharPr=
+      '<hh:charPr id="22" height="1300" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
+        '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+        '<hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+        '<hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+        '<hh:bold/>'+
+        '<hh:underline type="NONE" shape="SOLID" color="#000000"/>'+
+        '<hh:strikeout shape="NONE" color="#000000"/>'+
+        '<hh:outline type="NONE"/>'+
+        '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'+
+      '</hh:charPr>';
+    headerXml=increaseHwpxHeaderItemCount(headerXml,'charProperties',1);
+    headerXml=headerXml.replace('</hh:charProperties>',sectionHeadingCharPr+'</hh:charProperties>');
+  }
+
+  if(!headerXml.includes('<hh:paraPr id="20"')){
+    const centeredParaPr=
+      '<hh:paraPr id="20" tabPrIDRef="0" condense="0" fontLineHeight="0" snapToGrid="1" suppressLineNumbers="0" checked="0" textDir="LTR">'+
+        '<hh:align horizontal="CENTER" vertical="BASELINE"/>'+
+        '<hh:heading type="NONE" idRef="0" level="0"/>'+
+        '<hh:breakSetting breakLatinWord="KEEP_WORD" breakNonLatinWord="BREAK_WORD" widowOrphan="0" keepWithNext="0" keepLines="0" pageBreakBefore="0" lineWrap="BREAK"/>'+
+        '<hh:autoSpacing eAsianEng="0" eAsianNum="0"/>'+
+        '<hp:switch>'+
+          '<hp:case hp:required-namespace="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar">'+
+            '<hh:margin><hc:intent value="0" unit="HWPUNIT"/><hc:left value="0" unit="HWPUNIT"/><hc:right value="0" unit="HWPUNIT"/><hc:prev value="0" unit="HWPUNIT"/><hc:next value="0" unit="HWPUNIT"/></hh:margin>'+
+            '<hh:lineSpacing type="PERCENT" value="130" unit="HWPUNIT"/>'+
+          '</hp:case>'+
+          '<hp:default>'+
+            '<hh:margin><hc:intent value="0" unit="HWPUNIT"/><hc:left value="0" unit="HWPUNIT"/><hc:right value="0" unit="HWPUNIT"/><hc:prev value="0" unit="HWPUNIT"/><hc:next value="0" unit="HWPUNIT"/></hh:margin>'+
+            '<hh:lineSpacing type="PERCENT" value="130" unit="HWPUNIT"/>'+
+          '</hp:default>'+
+        '</hp:switch>'+
+        '<hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0" offsetTop="0" offsetBottom="0" connect="0" ignoreMargin="0"/>'+
+      '</hh:paraPr>';
+    headerXml=increaseHwpxHeaderItemCount(headerXml,'paraProperties',1);
+    headerXml=headerXml.replace('</hh:paraProperties>',centeredParaPr+'</hh:paraProperties>');
+  }
+
+  const borderFills=[
+    ['3',null,'NONE','SOLID'],
+    ['4','#D9D9D9','NONE','SOLID'],
+    ['5',null,'SOLID','SOLID'],
+    ['6',null,'SOLID','NONE'],
+    ['7','#D9D9D9','SOLID','SOLID'],
+    ['8','#D9D9D9','SOLID','NONE'],
+    ['9','#D9D9D9','NONE','NONE'],
+    ['10',null,'NONE','NONE'],
+  ];
+  borderFills.forEach(([id,fill,left,right])=>{
+    if(!headerXml.includes('<hh:borderFill id="'+id+'"')){
+      headerXml=increaseHwpxHeaderItemCount(headerXml,'borderFills',1);
+      headerXml=headerXml.replace('</hh:borderFills>',hwpxBorderFillXml(id,fill,left,right)+'</hh:borderFills>');
+    }
+  });
+  zip.file('Contents/header.xml',headerXml);
+}
+
+function buildHwpxParagraphs(model){
+  const meta=model.meta;
+  const s=model.stats;
+  const chunks=[
+    hwpxPara(model.title,'12','5'),
+    hwpxPara('부서명: '+(model.type==='dept'?model.dept:'전체')),
+    hwpxPara('기준연월: '+(meta.monthLabel||meta.monthValue||'-')),
+    hwpxPara('생성일시: '+meta.generatedAt),
+    hwpxHeading('1. 점검 요약'),
+    hwpxTable(
+      ['구분','값'],
+      [
+        ['총 인원',s.total],
+        ['안전(100점)',s.safe],
+        ['취약(1~99점)',s.vuln],
+        ['미점검',s.unc],
+        ['점검률',s.rate+'%'],
+      ],
+      [2,3]
+    )
+  ];
+
+  if(model.type==='overall'){
+    chunks.push(hwpxHeading('2. 부서별 현황'));
+    chunks.push(hwpxTable(
+      ['부서명','총원','안전','취약','미점검','점검률'],
+      model.deptSummary.map(d=>[d.dept,d.total,d.safe,d.vuln,d.unc,d.rate+'%'])
+    ,[4,1,1,1,1,1]));
+  }
+
+  chunks.push(hwpxHeading(model.type==='overall'?'3. 조치 필요 대상':'2. 조치 필요 대상'));
+  if(model.issueRows.length){
+    chunks.push(hwpxTable(
+      model.type==='overall'?['부서명','이름','IP','점수','조치 필요 항목']:['부서명','이름','점수','조치 필요 항목'],
+      model.issueRows.map(r=>model.type==='overall'
+        ? [r.dept,r.name,r.ip,r.score,r.notes]
+        : [r.dept,r.name,r.score,r.notes]
+      ),
+      model.type==='overall'?[3,2,3,1,5]:[3,2,1,6],
+      80
+    ));
+  } else {
+    chunks.push(hwpxPara('조치 필요 대상 없음'));
+  }
+
+  chunks.push(hwpxHeading(model.type==='overall'?'4. 취약 항목 분석':'3. 취약 항목 분석'));
+  if(model.vulnItems.length){
+    const base=model.type==='overall'?s.checked:model.checkedCnt;
+    chunks.push(hwpxTable(
+      ['취약 항목','건수','비율'],
+      model.vulnItems.map(([label,cnt])=>[label,cnt,base?Math.round(cnt/base*100)+'%':'-%'])
+    ,[5,1,1]));
+  } else {
+    chunks.push(hwpxPara('취약 항목 없음'));
+  }
+
+  chunks.push(hwpxHeading(model.type==='overall'?'5. 전체 점검 결과':'4. 부서 점검 결과'));
+  chunks.push(hwpxTable(
+    model.type==='overall'?['부서명','이름','IP','점수','비고']:['부서명','이름','점수','비고'],
+    model.rows.map(r=>model.type==='overall'
+      ? [r.dept,r.name,r.ip,r.score,r.notes]
+      : [r.dept,r.name,r.score,r.notes]
+    ),
+    model.type==='overall'?[3,2,3,1,4]:[3,2,1,5],
+    120
+  ));
+
+  return chunks.join('\n');
+}
+
+function buildHwpxSectionXml(model){
+  const body=buildHwpxParagraphs(model);
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'+
+    '<hs:sec '+HWPX_SECTION_NS+'>'+
+    '<hp:p id="3121190098" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'+
+      '<hp:run charPrIDRef="0">'+
+        '<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="1134" tabStop="8000" tabStopVal="4000" tabStopUnit="HWPUNIT" outlineShapeIDRef="1" memoShapeIDRef="0" textVerticalWidthHead="0" masterPageCnt="0">'+
+          '<hp:grid lineGrid="0" charGrid="0" wonggojiFormat="0"/>'+
+          '<hp:startNum pageStartsOn="BOTH" page="0" pic="0" tbl="0" equation="0"/>'+
+          '<hp:visibility hideFirstHeader="0" hideFirstFooter="0" hideFirstMasterPage="0" border="SHOW_ALL" fill="SHOW_ALL" hideFirstPageNum="0" hideFirstEmptyLine="0" showLineNumber="0"/>'+
+          '<hp:lineNumberShape restartType="0" countBy="0" distance="0" startNumber="0"/>'+
+          '<hp:pagePr landscape="WIDELY" width="59528" height="84186" gutterType="LEFT_ONLY"><hp:margin header="2835" footer="2835" gutter="0" left="5669" right="5669" top="4252" bottom="4252"/></hp:pagePr>'+
+          '<hp:footNotePr><hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/><hp:noteLine length="-1" type="SOLID" width="0.12 mm" color="#000000"/><hp:noteSpacing betweenNotes="283" belowLine="567" aboveLine="850"/><hp:numbering type="CONTINUOUS" newNum="1"/><hp:placement place="EACH_COLUMN" beneathText="0"/></hp:footNotePr>'+
+          '<hp:endNotePr><hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/><hp:noteLine length="14692344" type="SOLID" width="0.12 mm" color="#000000"/><hp:noteSpacing betweenNotes="0" belowLine="567" aboveLine="850"/><hp:numbering type="CONTINUOUS" newNum="1"/><hp:placement place="END_OF_DOCUMENT" beneathText="0"/></hp:endNotePr>'+
+          '<hp:pageBorderFill type="BOTH" borderFillIDRef="1" textBorder="PAPER" headerInside="0" footerInside="0" fillArea="PAPER"><hp:offset left="1417" right="1417" top="1417" bottom="1417"/></hp:pageBorderFill>'+
+          '<hp:pageBorderFill type="EVEN" borderFillIDRef="1" textBorder="PAPER" headerInside="0" footerInside="0" fillArea="PAPER"><hp:offset left="1417" right="1417" top="1417" bottom="1417"/></hp:pageBorderFill>'+
+          '<hp:pageBorderFill type="ODD" borderFillIDRef="1" textBorder="PAPER" headerInside="0" footerInside="0" fillArea="PAPER"><hp:offset left="1417" right="1417" top="1417" bottom="1417"/></hp:pageBorderFill>'+
+        '</hp:secPr>'+
+        '<hp:ctrl><hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1" sameSz="1" sameGap="0"/></hp:ctrl>'+
+      '</hp:run>'+
+    '</hp:p>\n'+body+'</hs:sec>';
+}
+
+async function createHwpxBlob(model){
+  const zip=await loadHwpxSkeletonZip();
+  await ensureHwpxTableStyles(zip);
+  zip.file('mimetype','application/hwp+zip',{compression:'STORE'});
+  zip.file('Contents/section0.xml',buildHwpxSectionXml(model));
+  zip.file('Preview/PrvText.txt',model.title+'\n'+model.rows.map(r=>[r.dept,r.name,r.score,r.notes].join(' ')).join('\n'));
+  return zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+}
+
+function downloadBlob(blob, filename){
+  const link=document.createElement('a');
+  link.href=URL.createObjectURL(blob);
+  link.download=filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+async function exportOverallHwpx(){
+  const btn=document.getElementById('overallHwpxBtn');
+  const orig=btn?btn.textContent:'';
+  if(btn){btn.textContent='HWPX 생성 중...';btn.disabled=true;}
+  try{
+    if(!getReportMonth()) initReportMonthUI();
+    const model=buildOverallReportModel();
+    const blob=await createHwpxBlob(model);
+    const mv=model.meta.monthValue;
+    const prefix=mv?mv.replace('-','_')+'_':'';
+    downloadBlob(blob,prefix+'PC보안점검_종합보고서.hwpx');
+  }catch(e){
+    alert('HWPX 생성 실패: '+e.message);
+  }
+  if(btn){btn.textContent=orig;btn.disabled=false;}
+}
+
+async function doExportDeptHwpxZip(){
+  const btn=document.getElementById('deptHwpxBtn');
+  const orig=btn?btn.textContent:'';
+  if(btn){btn.textContent='HWPX 생성 중...';btn.disabled=true;}
+  try{
+    if(typeof JSZip==='undefined') throw new Error('JSZip 로드 중입니다. 잠시 후 다시 시도하세요.');
+    const onlyIssues=document.getElementById('onlyIssues')?.checked||false;
+    const groups=_buildDeptGroups();
+    const mv=getReportMonth();
+    let prefix='PC점검결과_';
+    if(mv){
+      const [y,m]=mv.split('-');
+      prefix=y.slice(2)+'년 '+m.padStart(2,'0')+'월 PC점검결과_';
+    }
+
+    const zip=new JSZip();
+    let count=0;
+    for(const [dept,deptRows] of groups){
+      const stats=calcReportStats(deptRows);
+      if(onlyIssues&&!stats.vuln&&!stats.unc) continue;
+      const blob=await createHwpxBlob(buildDeptReportModel(dept,deptRows));
+      zip.file(prefix+safeFileName(dept)+'.hwpx',blob);
+      count++;
+    }
+    if(count===0){
+      alert('생성할 파일이 없습니다.');
+    } else {
+      const zipBlob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+      downloadBlob(zipBlob,(mv?mv.replace('-','_')+'_':'')+'부서별_PC점검결과_HWPX.zip');
+      closeDeptPreview();
+      alert('✅ '+count+'개 부서 HWPX ZIP 생성 완료');
+    }
+  }catch(e){
+    alert('HWPX ZIP 생성 실패: '+e.message);
+  }
+  if(btn){btn.textContent=orig;btn.disabled=false;}
+}
+
 function switchTab(tab){
   document.getElementById('pane-dash').classList.toggle('hidden', tab!=='dash');
   document.getElementById('pane-detail').classList.toggle('hidden', tab!=='detail');
@@ -1957,6 +2411,8 @@ function renderDeptPreview(){
   if(cntEl) cntEl.textContent=`📄 ${included}개 파일 생성 예정`;
   const btn=document.getElementById('deptGenerateBtn');
   if(btn) btn.disabled=included===0;
+  const hwpxBtn=document.getElementById('deptHwpxBtn');
+  if(hwpxBtn) hwpxBtn.disabled=included===0;
 }
 
 async function doExportDeptZip(){
