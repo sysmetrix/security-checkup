@@ -1780,7 +1780,7 @@ function hwpxPara(text, paraPrId='0', charPrId='0'){
 }
 
 function hwpxHeading(text){
-  return hwpxPara(text,'0','22');
+  return hwpxPara(text,'0','100');
 }
 
 const HWPX_BODY_WIDTH=48190;
@@ -1803,7 +1803,7 @@ function hwpxCellBorderId(isHeader, colAddr, colCnt){
 
 function hwpxCell(text,rowAddr,colAddr,colCnt,width,height,isHeader){
   const borderId=hwpxCellBorderId(isHeader,colAddr,colCnt);
-  const charId=isHeader?'21':'0';
+  const charId=isHeader?'101':'0';
   return '<hp:tc name="" header="'+(isHeader?'1':'0')+'" hasMargin="0" protect="0" editable="0" dirty="1" borderFillIDRef="'+borderId+'">'+
     '<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">'+
       '<hp:p id="'+hwpxId()+'" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'+
@@ -1884,41 +1884,48 @@ async function ensureHwpxTableStyles(zip){
   let headerXml=await file.async('string');
   headerXml=headerXml.replace(/(<hh:font\b[^>]*\bface=")[^"]*(")/g,'$1맑은 고딕$2');
 
-  if(!headerXml.includes('<hh:charPr id="21"')){
-    const tableHeaderCharPr=
-      '<hh:charPr id="21" height="1000" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
-        '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
-        '<hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
-        '<hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
-        '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
-        '<hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
-        '<hh:bold/>'+
-        '<hh:underline type="NONE" shape="SOLID" color="#000000"/>'+
-        '<hh:strikeout shape="NONE" color="#000000"/>'+
-        '<hh:outline type="NONE"/>'+
-        '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'+
-      '</hh:charPr>';
-    headerXml=increaseHwpxHeaderItemCount(headerXml,'charProperties',1);
-    headerXml=headerXml.replace('</hh:charProperties>',tableHeaderCharPr+'</hh:charProperties>');
-  }
+  // Expand self-closing charProperties so we can insert into it
+  headerXml=headerXml.replace(/<hh:charProperties([^>]*?)\/>/g,'<hh:charProperties$1></hh:charProperties>');
 
-  if(!headerXml.includes('<hh:charPr id="22"')){
-    const sectionHeadingCharPr=
-      '<hh:charPr id="22" height="1300" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
-        '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
-        '<hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
-        '<hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
-        '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
-        '<hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
-        '<hh:bold/>'+
-        '<hh:underline type="NONE" shape="SOLID" color="#000000"/>'+
-        '<hh:strikeout shape="NONE" color="#000000"/>'+
-        '<hh:outline type="NONE"/>'+
-        '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'+
-      '</hh:charPr>';
-    headerXml=increaseHwpxHeaderItemCount(headerXml,'charProperties',1);
-    headerXml=headerXml.replace('</hh:charProperties>',sectionHeadingCharPr+'</hh:charProperties>');
-  }
+  // Always remove and re-insert IDs 100/101 so templates that already define them get the correct bold+font
+  headerXml=headerXml.replace(/<hh:charPr id="100"[\s\S]*?<\/hh:charPr>/g,'');
+  headerXml=headerXml.replace(/<hh:charPr id="101"[\s\S]*?<\/hh:charPr>/g,'');
+
+  const tableHeaderCharPr=
+    '<hh:charPr id="101" height="1000" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
+      '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+      '<hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+      '<hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+      '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+      '<hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+      '<hh:bold/>'+
+      '<hh:underline type="NONE" shape="SOLID" color="#000000"/>'+
+      '<hh:strikeout shape="NONE" color="#000000"/>'+
+      '<hh:outline type="NONE"/>'+
+      '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'+
+    '</hh:charPr>';
+  headerXml=increaseHwpxHeaderItemCount(headerXml,'charProperties',1);
+  headerXml=headerXml.replace('</hh:charProperties>',tableHeaderCharPr+'</hh:charProperties>');
+
+  const sectionHeadingCharPr=
+    '<hh:charPr id="100" height="1300" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
+      '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+      '<hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+      '<hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+      '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
+      '<hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+      '<hh:bold/>'+
+      '<hh:underline type="NONE" shape="SOLID" color="#000000"/>'+
+      '<hh:strikeout shape="NONE" color="#000000"/>'+
+      '<hh:outline type="NONE"/>'+
+      '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'+
+    '</hh:charPr>';
+  headerXml=increaseHwpxHeaderItemCount(headerXml,'charProperties',1);
+  headerXml=headerXml.replace('</hh:charProperties>',sectionHeadingCharPr+'</hh:charProperties>');
+
+  // Expand self-closing paraProperties and borderFills for insertion
+  headerXml=headerXml.replace(/<hh:paraProperties([^>]*?)\/>/g,'<hh:paraProperties$1></hh:paraProperties>');
+  headerXml=headerXml.replace(/<hh:borderFills([^>]*?)\/>/g,'<hh:borderFills$1></hh:borderFills>');
 
   if(!headerXml.includes('<hh:paraPr id="20"')){
     const centeredParaPr=
