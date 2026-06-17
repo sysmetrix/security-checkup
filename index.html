@@ -21,7 +21,7 @@
     <button class="hd-btn" onclick="openHelp()">? 도움말</button>
     <button class="hd-btn" onclick="openSettings()">⚙️ 설정</button>
     <button class="hd-btn" id="darkBtn" onclick="toggleDark()">🌙 다크모드</button>
-    <button class="hd-btn" onclick="openChangelog()">v4.7 📋</button>
+    <button class="hd-btn" onclick="openChangelog()">v4.8 📋</button>
     <a class="hd-btn" id="githubBtn" href="YOUR_GITHUB_URL" target="_blank" rel="noopener" title="GitHub 저장소로 이동">↗ GitHub</a>
   </div>
 </header>
@@ -451,6 +451,19 @@
 
       <div class="cl-version">
         <div class="cl-ver-hd">
+          <span class="cl-badge major">v4.8</span>
+          <span class="cl-title">HWPX 표 첫 행 볼드 보강</span>
+          <span class="cl-date">2026-06</span>
+        </div>
+        <p class="cl-summary">표 첫 행이 한컴에서 더 확실히 볼드로 렌더링되도록 전용 글자 모양 ID와 맑은 고딕 Bold 폰트 참조를 보강했습니다.</p>
+        <div class="cl-tags">
+          <span class="cl-tag fix">첫 행 볼드 보강</span>
+          <span class="cl-tag improve">맑은 고딕 Bold 참조</span>
+        </div>
+      </div>
+
+      <div class="cl-version">
+        <div class="cl-ver-hd">
           <span class="cl-badge major">v4.7</span>
           <span class="cl-title">HWPX 표 세부 서식 보정</span>
           <span class="cl-date">2026-06</span>
@@ -665,6 +678,14 @@
 
     <!-- 탭 2: 기술 상세 -->
     <div class="cl-pane" id="clPane2" style="overflow-y:auto;max-height:calc(82vh - 130px)">
+      <div class="cl-tech-item">
+        <div class="cl-tech-ver">v4.8 — HWPX 첫 행 볼드</div>
+        <ul class="cl-tech-list">
+          <li>표 제목 행 charPrIDRef를 7번으로 재배치</li>
+          <li>섹션 제목 charPrIDRef를 8번으로 재배치</li>
+          <li>맑은 고딕 Bold font face를 추가하고 표 제목 행 fontRef에 연결</li>
+        </ul>
+      </div>
       <div class="cl-tech-item">
         <div class="cl-tech-ver">v4.7 — HWPX 표 세부 서식</div>
         <ul class="cl-tech-list">

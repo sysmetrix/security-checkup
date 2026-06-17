@@ -1780,7 +1780,7 @@ function hwpxPara(text, paraPrId='0', charPrId='0'){
 }
 
 function hwpxHeading(text){
-  return hwpxPara(text,'0','100');
+  return hwpxPara(text,'0','8');
 }
 
 const HWPX_BODY_WIDTH=48190;
@@ -1803,7 +1803,7 @@ function hwpxCellBorderId(isHeader, colAddr, colCnt){
 
 function hwpxCell(text,rowAddr,colAddr,colCnt,width,height,isHeader){
   const borderId=hwpxCellBorderId(isHeader,colAddr,colCnt);
-  const charId=isHeader?'101':'0';
+  const charId=isHeader?'7':'0';
   return '<hp:tc name="" header="'+(isHeader?'1':'0')+'" hasMargin="0" protect="0" editable="0" dirty="1" borderFillIDRef="'+borderId+'">'+
     '<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">'+
       '<hp:p id="'+hwpxId()+'" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'+
@@ -1878,13 +1878,20 @@ async function ensureHwpxTableStyles(zip){
   if(!file) return;
   let headerXml=await file.async('string');
 
-  // Replace all font faces with 맑은 고딕
+  // Replace all font faces with 맑은 고딕 and add an explicit bold face.
   headerXml=headerXml.replace(/(<hh:font\b[^>]*\bface=")[^"]*(")/g,'$1맑은 고딕$2');
+  headerXml=headerXml.replace(/<hh:fontface([^>]*)fontCnt="(\d+)"([^>]*)>([\s\S]*?)<\/hh:fontface>/g,(match,before,cnt,after,body)=>{
+    const kept=body.replace(/<hh:font id="2"[\s\S]*?<\/hh:font>/g,'');
+    const boldFont='<hh:font id="2" face="맑은 고딕 Bold" type="TTF" isEmbedded="0"><hh:typeInfo familyType="FCAT_GOTHIC" weight="9" proportion="4" contrast="0" strokeVariation="1" armStyle="1" letterform="1" midline="1" xHeight="1"/></hh:font>';
+    const nextBody=kept+boldFont;
+    const fontCnt=(nextBody.match(/<hh:font\b/g)||[]).length;
+    return '<hh:fontface'+before+'fontCnt="'+fontCnt+'"'+after+'>'+nextBody+'</hh:fontface>';
+  });
 
   // --- charProperties: rebuild entire block with our bold charPr entries ---
   const tableHeaderCharPr=
-    '<hh:charPr id="101" height="1000" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
-      '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+    '<hh:charPr id="7" height="1000" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
+      '<hh:fontRef hangul="2" latin="2" hanja="2" japanese="2" other="2" symbol="2" user="2"/>'+
       '<hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
       '<hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
       '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
@@ -1896,8 +1903,8 @@ async function ensureHwpxTableStyles(zip){
       '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'+
     '</hh:charPr>';
   const sectionHeadingCharPr=
-    '<hh:charPr id="100" height="1300" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
-      '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
+    '<hh:charPr id="8" height="1300" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
+      '<hh:fontRef hangul="2" latin="2" hanja="2" japanese="2" other="2" symbol="2" user="2"/>'+
       '<hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
       '<hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
       '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'+
@@ -1914,7 +1921,7 @@ async function ensureHwpxTableStyles(zip){
     const m=headerXml.match(/<hh:charProperties\b[^>]*>([\s\S]*?)<\/hh:charProperties>/);
     if(!m) return;
     const kept=(m[1].match(/<hh:charPr [\s\S]*?<\/hh:charPr>/g)||[])
-      .filter(s=>!/<hh:charPr id="10[01]"/.test(s));
+      .filter(s=>!/<hh:charPr id="(?:[78]|10[01])"/.test(s));
     const newBlock='<hh:charProperties itemCnt="'+(kept.length+2)+'">'+
       kept.join('')+tableHeaderCharPr+sectionHeadingCharPr+'</hh:charProperties>';
     headerXml=headerXml.replace(/<hh:charProperties\b[^>]*>[\s\S]*?<\/hh:charProperties>/,newBlock);
