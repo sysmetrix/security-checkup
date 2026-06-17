@@ -4,6 +4,18 @@
 
 ---
 
+## v4.9 — HWPX 맑은 고딕 적용 보강 `2026-06`
+
+### 변경 내용
+- HWPX 글꼴이 맑은 고딕으로 적용되지 않던 문제 보강
+- 기존 글꼴 목록 부분 치환 대신 `fontfaces` 블록 전체를 맑은 고딕 기준으로 재구성
+
+### 기술
+- `HANGUL`, `LATIN`, `HANJA`, `JAPANESE`, `OTHER`, `SYMBOL`, `USER` fontface를 모두 맑은 고딕 계열로 생성
+- regular font id `0`, `1`과 bold font id `2`를 명시
+
+---
+
 ## v4.8 — HWPX 표 첫 행 볼드 보강 `2026-06`
 
 ### 변경 내용

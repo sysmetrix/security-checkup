@@ -1873,20 +1873,26 @@ function hwpxBorderFillXml(id, fillColor, leftType, rightType){
   '</hh:borderFill>';
 }
 
+function hwpxFontFacesXml(){
+  const langs=['HANGUL','LATIN','HANJA','JAPANESE','OTHER','SYMBOL','USER'];
+  const regularTypeInfo='<hh:typeInfo familyType="FCAT_GOTHIC" weight="6" proportion="4" contrast="0" strokeVariation="1" armStyle="1" letterform="1" midline="1" xHeight="1"/>';
+  const boldTypeInfo='<hh:typeInfo familyType="FCAT_GOTHIC" weight="9" proportion="4" contrast="0" strokeVariation="1" armStyle="1" letterform="1" midline="1" xHeight="1"/>';
+  const fontfaces=langs.map(lang=>
+    '<hh:fontface lang="'+lang+'" fontCnt="3">'+
+      '<hh:font id="0" face="맑은 고딕" type="TTF" isEmbedded="0">'+regularTypeInfo+'</hh:font>'+
+      '<hh:font id="1" face="맑은 고딕" type="TTF" isEmbedded="0">'+regularTypeInfo+'</hh:font>'+
+      '<hh:font id="2" face="맑은 고딕 Bold" type="TTF" isEmbedded="0">'+boldTypeInfo+'</hh:font>'+
+    '</hh:fontface>'
+  ).join('');
+  return '<hh:fontfaces itemCnt="'+langs.length+'">'+fontfaces+'</hh:fontfaces>';
+}
+
 async function ensureHwpxTableStyles(zip){
   const file=zip.file('Contents/header.xml');
   if(!file) return;
   let headerXml=await file.async('string');
 
-  // Replace all font faces with 맑은 고딕 and add an explicit bold face.
-  headerXml=headerXml.replace(/(<hh:font\b[^>]*\bface=")[^"]*(")/g,'$1맑은 고딕$2');
-  headerXml=headerXml.replace(/<hh:fontface([^>]*)fontCnt="(\d+)"([^>]*)>([\s\S]*?)<\/hh:fontface>/g,(match,before,cnt,after,body)=>{
-    const kept=body.replace(/<hh:font id="2"[\s\S]*?<\/hh:font>/g,'');
-    const boldFont='<hh:font id="2" face="맑은 고딕 Bold" type="TTF" isEmbedded="0"><hh:typeInfo familyType="FCAT_GOTHIC" weight="9" proportion="4" contrast="0" strokeVariation="1" armStyle="1" letterform="1" midline="1" xHeight="1"/></hh:font>';
-    const nextBody=kept+boldFont;
-    const fontCnt=(nextBody.match(/<hh:font\b/g)||[]).length;
-    return '<hh:fontface'+before+'fontCnt="'+fontCnt+'"'+after+'>'+nextBody+'</hh:fontface>';
-  });
+  headerXml=headerXml.replace(/<hh:fontfaces\b[^>]*>[\s\S]*?<\/hh:fontfaces>/,hwpxFontFacesXml());
 
   // --- charProperties: rebuild entire block with our bold charPr entries ---
   const tableHeaderCharPr=

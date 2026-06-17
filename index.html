@@ -21,7 +21,7 @@
     <button class="hd-btn" onclick="openHelp()">? 도움말</button>
     <button class="hd-btn" onclick="openSettings()">⚙️ 설정</button>
     <button class="hd-btn" id="darkBtn" onclick="toggleDark()">🌙 다크모드</button>
-    <button class="hd-btn" onclick="openChangelog()">v4.8 📋</button>
+    <button class="hd-btn" onclick="openChangelog()">v4.9 📋</button>
     <a class="hd-btn" id="githubBtn" href="YOUR_GITHUB_URL" target="_blank" rel="noopener" title="GitHub 저장소로 이동">↗ GitHub</a>
   </div>
 </header>
@@ -451,6 +451,19 @@
 
       <div class="cl-version">
         <div class="cl-ver-hd">
+          <span class="cl-badge major">v4.9</span>
+          <span class="cl-title">HWPX 맑은 고딕 적용 보강</span>
+          <span class="cl-date">2026-06</span>
+        </div>
+        <p class="cl-summary">HWPX 글꼴 목록을 부분 치환하지 않고 맑은 고딕 기준 fontfaces 블록으로 재구성해 한컴에서 글꼴 적용이 더 안정적으로 반영되도록 보강했습니다.</p>
+        <div class="cl-tags">
+          <span class="cl-tag fix">맑은 고딕 적용 보강</span>
+          <span class="cl-tag improve">fontfaces 재구성</span>
+        </div>
+      </div>
+
+      <div class="cl-version">
+        <div class="cl-ver-hd">
           <span class="cl-badge major">v4.8</span>
           <span class="cl-title">HWPX 표 첫 행 볼드 보강</span>
           <span class="cl-date">2026-06</span>
@@ -678,6 +691,14 @@
 
     <!-- 탭 2: 기술 상세 -->
     <div class="cl-pane" id="clPane2" style="overflow-y:auto;max-height:calc(82vh - 130px)">
+      <div class="cl-tech-item">
+        <div class="cl-tech-ver">v4.9 — HWPX 맑은 고딕</div>
+        <ul class="cl-tech-list">
+          <li>Contents/header.xml의 hh:fontfaces 블록을 맑은 고딕 기준으로 재구성</li>
+          <li>모든 언어 축에 regular font id 0/1과 bold font id 2 명시</li>
+          <li>표 제목 행의 bold fontRef와 일반 본문 fontRef가 같은 글꼴군을 참조하도록 정리</li>
+        </ul>
+      </div>
       <div class="cl-tech-item">
         <div class="cl-tech-ver">v4.8 — HWPX 첫 행 볼드</div>
         <ul class="cl-tech-list">
