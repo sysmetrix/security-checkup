@@ -1862,11 +1862,6 @@ async function loadHwpxSkeletonZip(){
   return JSZip.loadAsync(bytes.slice(0));
 }
 
-function increaseHwpxHeaderItemCount(xml, listName, delta){
-  const re=new RegExp('<hh:'+listName+' itemCnt="(\\d+)">');
-  return xml.replace(re,(_,cnt)=>'<hh:'+listName+' itemCnt="'+((Number(cnt)||0)+delta)+'">');
-}
-
 function hwpxBorderFillXml(id, fillColor, leftType, rightType){
   const fill=fillColor?'<hc:fillBrush><hc:winBrush faceColor="'+fillColor+'" hatchColor="#000000" alpha="0"/></hc:fillBrush>':'';
   return '<hh:borderFill id="'+id+'" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">'+
@@ -1882,15 +1877,11 @@ async function ensureHwpxTableStyles(zip){
   const file=zip.file('Contents/header.xml');
   if(!file) return;
   let headerXml=await file.async('string');
+
+  // Replace all font faces with 맑은 고딕
   headerXml=headerXml.replace(/(<hh:font\b[^>]*\bface=")[^"]*(")/g,'$1맑은 고딕$2');
 
-  // Expand self-closing charProperties so we can insert into it
-  headerXml=headerXml.replace(/<hh:charProperties([^>]*?)\/>/g,'<hh:charProperties$1></hh:charProperties>');
-
-  // Always remove and re-insert IDs 100/101 so templates that already define them get the correct bold+font
-  headerXml=headerXml.replace(/<hh:charPr id="100"[\s\S]*?<\/hh:charPr>/g,'');
-  headerXml=headerXml.replace(/<hh:charPr id="101"[\s\S]*?<\/hh:charPr>/g,'');
-
+  // --- charProperties: rebuild entire block with our bold charPr entries ---
   const tableHeaderCharPr=
     '<hh:charPr id="101" height="1000" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
       '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
@@ -1904,9 +1895,6 @@ async function ensureHwpxTableStyles(zip){
       '<hh:outline type="NONE"/>'+
       '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'+
     '</hh:charPr>';
-  headerXml=increaseHwpxHeaderItemCount(headerXml,'charProperties',1);
-  headerXml=headerXml.replace('</hh:charProperties>',tableHeaderCharPr+'</hh:charProperties>');
-
   const sectionHeadingCharPr=
     '<hh:charPr id="100" height="1300" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">'+
       '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'+
@@ -1920,37 +1908,51 @@ async function ensureHwpxTableStyles(zip){
       '<hh:outline type="NONE"/>'+
       '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'+
     '</hh:charPr>';
-  headerXml=increaseHwpxHeaderItemCount(headerXml,'charProperties',1);
-  headerXml=headerXml.replace('</hh:charProperties>',sectionHeadingCharPr+'</hh:charProperties>');
 
-  // Expand self-closing paraProperties and borderFills for insertion
+  headerXml=headerXml.replace(/<hh:charProperties([^>]*?)\/>/g,'<hh:charProperties$1></hh:charProperties>');
+  (function(){
+    const m=headerXml.match(/<hh:charProperties\b[^>]*>([\s\S]*?)<\/hh:charProperties>/);
+    if(!m) return;
+    const kept=(m[1].match(/<hh:charPr [\s\S]*?<\/hh:charPr>/g)||[])
+      .filter(s=>!/<hh:charPr id="10[01]"/.test(s));
+    const newBlock='<hh:charProperties itemCnt="'+(kept.length+2)+'">'+
+      kept.join('')+tableHeaderCharPr+sectionHeadingCharPr+'</hh:charProperties>';
+    headerXml=headerXml.replace(/<hh:charProperties\b[^>]*>[\s\S]*?<\/hh:charProperties>/,newBlock);
+  })();
+
+  // --- paraProperties: rebuild entire block with centered paraPr id=20 ---
+  const centeredParaPr=
+    '<hh:paraPr id="20" tabPrIDRef="0" condense="0" fontLineHeight="0" snapToGrid="1" suppressLineNumbers="0" checked="0" textDir="LTR">'+
+      '<hh:align horizontal="CENTER" vertical="BASELINE"/>'+
+      '<hh:heading type="NONE" idRef="0" level="0"/>'+
+      '<hh:breakSetting breakLatinWord="KEEP_WORD" breakNonLatinWord="BREAK_WORD" widowOrphan="0" keepWithNext="0" keepLines="0" pageBreakBefore="0" lineWrap="BREAK"/>'+
+      '<hh:autoSpacing eAsianEng="0" eAsianNum="0"/>'+
+      '<hp:switch>'+
+        '<hp:case hp:required-namespace="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar">'+
+          '<hh:margin><hc:intent value="0" unit="HWPUNIT"/><hc:left value="0" unit="HWPUNIT"/><hc:right value="0" unit="HWPUNIT"/><hc:prev value="0" unit="HWPUNIT"/><hc:next value="0" unit="HWPUNIT"/></hh:margin>'+
+          '<hh:lineSpacing type="PERCENT" value="130" unit="HWPUNIT"/>'+
+        '</hp:case>'+
+        '<hp:default>'+
+          '<hh:margin><hc:intent value="0" unit="HWPUNIT"/><hc:left value="0" unit="HWPUNIT"/><hc:right value="0" unit="HWPUNIT"/><hc:prev value="0" unit="HWPUNIT"/><hc:next value="0" unit="HWPUNIT"/></hh:margin>'+
+          '<hh:lineSpacing type="PERCENT" value="130" unit="HWPUNIT"/>'+
+        '</hp:default>'+
+      '</hp:switch>'+
+      '<hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0" offsetTop="0" offsetBottom="0" connect="0" ignoreMargin="0"/>'+
+    '</hh:paraPr>';
+
   headerXml=headerXml.replace(/<hh:paraProperties([^>]*?)\/>/g,'<hh:paraProperties$1></hh:paraProperties>');
-  headerXml=headerXml.replace(/<hh:borderFills([^>]*?)\/>/g,'<hh:borderFills$1></hh:borderFills>');
+  (function(){
+    const m=headerXml.match(/<hh:paraProperties\b[^>]*>([\s\S]*?)<\/hh:paraProperties>/);
+    if(!m) return;
+    const kept=(m[1].match(/<hh:paraPr [\s\S]*?<\/hh:paraPr>/g)||[])
+      .filter(s=>!/<hh:paraPr id="20"/.test(s));
+    const newBlock='<hh:paraProperties itemCnt="'+(kept.length+1)+'">'+
+      kept.join('')+centeredParaPr+'</hh:paraProperties>';
+    headerXml=headerXml.replace(/<hh:paraProperties\b[^>]*>[\s\S]*?<\/hh:paraProperties>/,newBlock);
+  })();
 
-  if(!headerXml.includes('<hh:paraPr id="20"')){
-    const centeredParaPr=
-      '<hh:paraPr id="20" tabPrIDRef="0" condense="0" fontLineHeight="0" snapToGrid="1" suppressLineNumbers="0" checked="0" textDir="LTR">'+
-        '<hh:align horizontal="CENTER" vertical="BASELINE"/>'+
-        '<hh:heading type="NONE" idRef="0" level="0"/>'+
-        '<hh:breakSetting breakLatinWord="KEEP_WORD" breakNonLatinWord="BREAK_WORD" widowOrphan="0" keepWithNext="0" keepLines="0" pageBreakBefore="0" lineWrap="BREAK"/>'+
-        '<hh:autoSpacing eAsianEng="0" eAsianNum="0"/>'+
-        '<hp:switch>'+
-          '<hp:case hp:required-namespace="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar">'+
-            '<hh:margin><hc:intent value="0" unit="HWPUNIT"/><hc:left value="0" unit="HWPUNIT"/><hc:right value="0" unit="HWPUNIT"/><hc:prev value="0" unit="HWPUNIT"/><hc:next value="0" unit="HWPUNIT"/></hh:margin>'+
-            '<hh:lineSpacing type="PERCENT" value="130" unit="HWPUNIT"/>'+
-          '</hp:case>'+
-          '<hp:default>'+
-            '<hh:margin><hc:intent value="0" unit="HWPUNIT"/><hc:left value="0" unit="HWPUNIT"/><hc:right value="0" unit="HWPUNIT"/><hc:prev value="0" unit="HWPUNIT"/><hc:next value="0" unit="HWPUNIT"/></hh:margin>'+
-            '<hh:lineSpacing type="PERCENT" value="130" unit="HWPUNIT"/>'+
-          '</hp:default>'+
-        '</hp:switch>'+
-        '<hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0" offsetTop="0" offsetBottom="0" connect="0" ignoreMargin="0"/>'+
-      '</hh:paraPr>';
-    headerXml=increaseHwpxHeaderItemCount(headerXml,'paraProperties',1);
-    headerXml=headerXml.replace('</hh:paraProperties>',centeredParaPr+'</hh:paraProperties>');
-  }
-
-  const borderFills=[
+  // --- borderFills: rebuild entire block keeping existing non-3~10, adding ours ---
+  const customBorderFills=[
     ['3',null,'NONE','SOLID'],
     ['4','#D9D9D9','NONE','SOLID'],
     ['5',null,'SOLID','SOLID'],
@@ -1960,12 +1962,20 @@ async function ensureHwpxTableStyles(zip){
     ['9','#D9D9D9','NONE','NONE'],
     ['10',null,'NONE','NONE'],
   ];
-  borderFills.forEach(([id,fill,left,right])=>{
-    if(!headerXml.includes('<hh:borderFill id="'+id+'"')){
-      headerXml=increaseHwpxHeaderItemCount(headerXml,'borderFills',1);
-      headerXml=headerXml.replace('</hh:borderFills>',hwpxBorderFillXml(id,fill,left,right)+'</hh:borderFills>');
-    }
-  });
+  const ourBorderIds=new Set(customBorderFills.map(([id])=>id));
+
+  headerXml=headerXml.replace(/<hh:borderFills([^>]*?)\/>/g,'<hh:borderFills$1></hh:borderFills>');
+  (function(){
+    const m=headerXml.match(/<hh:borderFills\b[^>]*>([\s\S]*?)<\/hh:borderFills>/);
+    if(!m) return;
+    const kept=(m[1].match(/<hh:borderFill [\s\S]*?<\/hh:borderFill>/g)||[])
+      .filter(s=>{const id=(s.match(/<hh:borderFill id="([^"]*)"/)||[])[1];return!ourBorderIds.has(id);});
+    const newFills=customBorderFills.map(([id,fill,left,right])=>hwpxBorderFillXml(id,fill,left,right));
+    const all=kept.concat(newFills);
+    const newBlock='<hh:borderFills itemCnt="'+all.length+'">'+all.join('')+'</hh:borderFills>';
+    headerXml=headerXml.replace(/<hh:borderFills\b[^>]*>[\s\S]*?<\/hh:borderFills>/,newBlock);
+  })();
+
   zip.file('Contents/header.xml',headerXml);
 }
 
