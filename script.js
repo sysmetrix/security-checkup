@@ -1877,11 +1877,12 @@ function hwpxFontFacesXml(){
   const langs=['HANGUL','LATIN','HANJA','JAPANESE','OTHER','SYMBOL','USER'];
   const regularTypeInfo='<hh:typeInfo familyType="FCAT_GOTHIC" weight="6" proportion="4" contrast="0" strokeVariation="1" armStyle="1" letterform="1" midline="1" xHeight="1"/>';
   const boldTypeInfo='<hh:typeInfo familyType="FCAT_GOTHIC" weight="9" proportion="4" contrast="0" strokeVariation="1" armStyle="1" letterform="1" midline="1" xHeight="1"/>';
+  const face='Malgun Gothic';
   const fontfaces=langs.map(lang=>
     '<hh:fontface lang="'+lang+'" fontCnt="3">'+
-      '<hh:font id="0" face="맑은 고딕" type="TTF" isEmbedded="0">'+regularTypeInfo+'</hh:font>'+
-      '<hh:font id="1" face="맑은 고딕" type="TTF" isEmbedded="0">'+regularTypeInfo+'</hh:font>'+
-      '<hh:font id="2" face="맑은 고딕 Bold" type="TTF" isEmbedded="0">'+boldTypeInfo+'</hh:font>'+
+      '<hh:font id="0" face="'+face+'" type="TTF" isEmbedded="0">'+regularTypeInfo+'</hh:font>'+
+      '<hh:font id="1" face="'+face+'" type="TTF" isEmbedded="0">'+regularTypeInfo+'</hh:font>'+
+      '<hh:font id="2" face="'+face+'" type="TTF" isEmbedded="0">'+boldTypeInfo+'</hh:font>'+
     '</hh:fontface>'
   ).join('');
   return '<hh:fontfaces itemCnt="'+langs.length+'">'+fontfaces+'</hh:fontfaces>';
